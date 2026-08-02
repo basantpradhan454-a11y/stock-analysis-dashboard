@@ -1,5 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
+import yfinance as yf
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -19,25 +20,29 @@ st.set_page_config(
     menu_items={
         "Get Help": None,
         "Report a Bug": None,
-        "About": "📊 Quant Desk — Stock Analysis Dashboard\nBuilt with Streamlit + Plotly + TradingView\nFor educational purposes only — not financial advice.",
+        "About": "📊 Quant Desk — Stock Analysis Dashboard\nBuilt with Streamlit + Plotly + yfinance\nFor educational purposes only — not financial advice.",
     },
 )
 
 # ──────────────────────────────────────────────
-# DATA
+# ASSETS WATCHLIST
 # ──────────────────────────────────────────────
 
-SYMBOLS = [
-    {"symbol": "RELIANCE",   "exchange": "NSE", "name": "Reliance Industries",      "base_price": 2940,  "sector": "Energy"},
-    {"symbol": "TCS",        "exchange": "NSE", "name": "Tata Consultancy Services", "base_price": 3870,  "sector": "IT"},
-    {"symbol": "HDFCBANK",   "exchange": "NSE", "name": "HDFC Bank",                 "base_price": 1685,  "sector": "Banking"},
-    {"symbol": "INFY",       "exchange": "NSE", "name": "Infosys",                   "base_price": 1810,  "sector": "IT"},
-    {"symbol": "ITC",        "exchange": "NSE", "name": "ITC Ltd",                    "base_price": 462,   "sector": "FMCG"},
-    {"symbol": "TATAMOTORS", "exchange": "NSE", "name": "Tata Motors",                "base_price": 985,   "sector": "Auto"},
-    {"symbol": "SBIN",       "exchange": "NSE", "name": "State Bank of India",        "base_price": 812,   "sector": "Banking"},
-    {"symbol": "BHARTIARTL", "exchange": "NSE", "name": "Bharti Airtel",              "base_price": 1590,  "sector": "Telecom"},
-    {"symbol": "NIFTY",      "exchange": "NSE", "name": "Nifty 50 Index",             "base_price": 22000, "sector": "Index"},
-    {"symbol": "BANKNIFTY",  "exchange": "NSE", "name": "Bank Nifty Index",           "base_price": 48000, "sector": "Index"},
+ASSETS = [
+    {"ticker": "RELIANCE.NS",   "name": "Reliance Industries",      "type": "Stock (NSE)"},
+    {"ticker": "TCS.NS",        "name": "Tata Consultancy Services","type": "Stock (NSE)"},
+    {"ticker": "HDFCBANK.NS",   "name": "HDFC Bank",               "type": "Stock (NSE)"},
+    {"ticker": "INFY.NS",       "name": "Infosys",                 "type": "Stock (NSE)"},
+    {"ticker": "ITC.NS",        "name": "ITC Ltd",                 "type": "Stock (NSE)"},
+    {"ticker": "TATAMOTORS.NS", "name": "Tata Motors",            "type": "Stock (NSE)"},
+    {"ticker": "SBIN.NS",       "name": "State Bank of India",    "type": "Stock (NSE)"},
+    {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel",          "type": "Stock (NSE)"},
+    {"ticker": "^NSEI",         "name": "Nifty 50 Index",          "type": "Index"},
+    {"ticker": "^NSEBANK",      "name": "Bank Nifty Index",       "type": "Index"},
+    {"ticker": "AAPL",          "name": "Apple Inc.",              "type": "Stock (US)"},
+    {"ticker": "BTC-USD",       "name": "Bitcoin",                 "type": "Crypto"},
+    {"ticker": "ETH-USD",       "name": "Ethereum",               "type": "Crypto"},
+    {"ticker": "GC=F",          "name": "Gold Futures",            "type": "Commodity"},
 ]
 
 BROKERS = [
@@ -49,54 +54,62 @@ BROKERS = [
 ]
 
 # ──────────────────────────────────────────────
-# SEEDED RANDOM (matches JS mulberry32)
+# SESSION STATE
 # ──────────────────────────────────────────────
 
-def mulberry32(seed):
-    """Pure-Python mulberry32 PRNG — matches the JS version bit-for-bit."""
-    state = seed & 0xFFFFFFFF
-    def _rand():
-        nonlocal state
-        state = (state + 0x6D2B79F5) & 0xFFFFFFFF
-        # imul(a, b) = (a * b) & 0xFFFFFFFF in JS when both are 32-bit
-        t = ((state ^ ((state >> 15) & 0xFFFF)) * (1 | state)) & 0xFFFFFFFF
-        t = (t + (((t ^ ((t >> 7) & 0xFFFFFF)) * (61 | t)) & 0xFFFFFFFF)) & 0xFFFFFFFF
-        t = t ^ ((t >> 14) & 0x3FFFF)
-        return t / 4294967296
-    return _rand
+if "selected_asset" not in st.session_state:
+    st.session_state.selected_asset = None
+if "show_analysis" not in st.session_state:
+    st.session_state.show_analysis = False
+if "analysis_result" not in st.session_state:
+    st.session_state.analysis_result = None
+if "voice_generated" not in st.session_state:
+    st.session_state.voice_generated = None
+if "theme" not in st.session_state:
+    st.session_state.theme = "dark"
+if "connection" not in st.session_state:
+    st.session_state.connection = None
+if "credentials" not in st.session_state:
+    st.session_state.credentials = {}
+if "period" not in st.session_state:
+    st.session_state.period = "6mo"
+if "interval" not in st.session_state:
+    st.session_state.interval = "1d"
 
-def symbol_seed(symbol):
-    s = 0
-    for i, ch in enumerate(symbol):
-        s += ord(ch) * (i + 7)
-    return s & 0xFFFFFFFF
+# ──────────────────────────────────────────────
+# DATA FETCH (yfinance)
+# ──────────────────────────────────────────────
 
-def gen_candles(symbol, base_price, n=120):
-    seed = symbol_seed(symbol)
-    rand = mulberry32(seed)
-    price = base_price * (0.9 + rand() * 0.2)
-    drift = (rand() - 0.48) * 0.0018
-    candles = []
-    today = pd.Timestamp.now().normalize()
-    for i in range(n):
-        vol = 0.012 + rand() * 0.014
-        change = drift + (rand() - 0.5) * vol
-        open_ = price
-        close = open_ * (1 + change)
-        high = max(open_, close) * (1 + rand() * 0.006)
-        low = min(open_, close) * (1 - rand() * 0.006)
-        volume = round(500_000 + rand() * 4_500_000 * (1 + abs(change) * 20))
-        price = close
-        d = today - pd.Timedelta(days=n - i - 1)
-        candles.append({
-            "date": d,
-            "open": round(open_, 2),
-            "close": round(close, 2),
-            "high": round(high, 2),
-            "low": round(low, 2),
-            "volume": volume,
-        })
-    return pd.DataFrame(candles)
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_ohlc(ticker, period="6mo", interval="1d"):
+    """Fetch real OHLC data using yfinance. Returns DataFrame with lowercase columns."""
+    try:
+        df = yf.download(ticker, period=period, interval=interval, progress=False, auto_adjust=True)
+        if df is None or df.empty:
+            return None
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+        df = df.reset_index()
+        date_col = "Date" if "Date" in df.columns else "Datetime"
+        df = df.rename(columns={date_col: "date"})
+        # Rename to lowercase
+        rename_map = {}
+        for col in df.columns:
+            cl = col.lower()
+            if cl == "open": rename_map[col] = "open"
+            elif cl == "high": rename_map[col] = "high"
+            elif cl == "low": rename_map[col] = "low"
+            elif cl == "close": rename_map[col] = "close"
+            elif cl == "volume": rename_map[col] = "volume"
+        df = df.rename(columns=rename_map)
+        # Ensure numeric
+        for col in ["open", "high", "low", "close", "volume"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+        df = df.dropna(subset=["open", "high", "low", "close"])
+        return df
+    except Exception:
+        return None
 
 # ──────────────────────────────────────────────
 # TECHNICAL INDICATORS
@@ -165,7 +178,6 @@ def detect_patterns(df):
 # ──────────────────────────────────────────────
 
 def find_pivots(df, lookback=3):
-    """Detect pivot highs and lows — local extrema over a lookback window."""
     highs, lows = [], []
     n = len(df)
     for i in range(lookback, n - lookback):
@@ -185,7 +197,6 @@ def find_pivots(df, lookback=3):
     return {"highs": highs, "lows": lows}
 
 def linear_regression(points):
-    """Compute linear regression (slope + intercept) from {idx, price} points."""
     n_pts = len(points)
     if n_pts < 2:
         return None
@@ -201,7 +212,7 @@ def linear_regression(points):
     return {"slope": slope, "intercept": intercept}
 
 # ──────────────────────────────────────────────
-# ANALYSIS
+# ANALYSIS (chart data)
 # ──────────────────────────────────────────────
 
 def build_analysis(df):
@@ -234,7 +245,7 @@ def build_analysis(df):
     last_bb_upper = last_val(bb_upper)
     last_bb_lower = last_val(bb_lower)
 
-    avg_vol = df["volume"].iloc[-20:].mean()
+    avg_vol = df["volume"].iloc[-20:].mean() if "volume" in df.columns else 0
     vol_ratio = round(last["volume"] / avg_vol, 2) if avg_vol else 0
 
     returns = closes.pct_change().dropna()
@@ -270,7 +281,6 @@ def build_analysis(df):
     support = round(df["low"].iloc[-20:].min(), 2)
     resistance = round(df["high"].iloc[-20:].max(), 2)
 
-    # Pivot-based trend lines (linear regression on recent pivots)
     pivots = find_pivots(df)
     res_trend = linear_regression(pivots["highs"][-6:]) if len(pivots["highs"]) >= 2 else None
     sup_trend = linear_regression(pivots["lows"][-6:]) if len(pivots["lows"]) >= 2 else None
@@ -300,16 +310,113 @@ def build_analysis(df):
         "pivots": pivots,
     }
 
+# ──────────────────────────────────────────────
+# AI ANALYSIS (quant + technical + summary)
+# ──────────────────────────────────────────────
+
+def compute_ai_summary(df):
+    """Compute indicators and build a quant + technical + overall summary."""
+    close = df["close"]
+
+    sma20 = close.rolling(20).mean()
+    sma50 = close.rolling(50).mean()
+    ema12 = close.ewm(span=12, adjust=False).mean()
+    ema26 = close.ewm(span=26, adjust=False).mean()
+    macd_val = ema12 - ema26
+    signal_val = macd_val.ewm(span=9, adjust=False).mean()
+
+    delta = close.diff()
+    gain = delta.clip(lower=0).rolling(14).mean()
+    loss = (-delta.clip(upper=0)).rolling(14).mean()
+    rs = gain / loss
+    rsi_val = 100 - (100 / (1 + rs))
+
+    daily_returns = close.pct_change().dropna()
+    volatility = float(daily_returns.std() * np.sqrt(252) * 100) if len(daily_returns) > 0 else 0
+    sharpe = float((daily_returns.mean() / daily_returns.std()) * np.sqrt(252)) if len(daily_returns) > 0 and daily_returns.std() != 0 else 0
+
+    last_close = float(close.iloc[-1])
+    last_sma20 = float(sma20.iloc[-1]) if not pd.isna(sma20.iloc[-1]) else None
+    last_sma50 = float(sma50.iloc[-1]) if not pd.isna(sma50.iloc[-1]) else None
+    last_rsi = float(rsi_val.iloc[-1]) if not pd.isna(rsi_val.iloc[-1]) else None
+    last_macd = float(macd_val.iloc[-1]) if not pd.isna(macd_val.iloc[-1]) else 0
+    last_signal = float(signal_val.iloc[-1]) if not pd.isna(signal_val.iloc[-1]) else 0
+
+    period_high = round(float(close.max()), 2)
+    period_low = round(float(close.min()), 2)
+
+    # Build summary
+    trend = "uptrend" if last_sma20 and last_close > last_sma20 else "downtrend"
+    if last_sma20 and last_sma50:
+        trend_strength = "strong" if (last_sma20 > last_sma50) == (trend == "uptrend") else "weak/mixed"
+    else:
+        trend_strength = "insufficient data"
+
+    if last_rsi is None:
+        rsi_state = "not enough data"
+    elif last_rsi > 70:
+        rsi_state = "overbought"
+    elif last_rsi < 30:
+        rsi_state = "oversold"
+    else:
+        rsi_state = "neutral"
+
+    macd_state = "bullish crossover" if last_macd > last_signal else "bearish crossover"
+
+    quant_text = (
+        f"Annualized volatility is {round(volatility, 2)}%, with a Sharpe ratio of "
+        f"{round(sharpe, 2)}. Price is trading between a period low of {period_low} and "
+        f"high of {period_high}, currently at {round(last_close, 2)}."
+    )
+
+    technical_text = (
+        f"Price is in a {trend} ({trend_strength}) relative to the 20/50-day SMA "
+        f"({round(last_sma20, 2) if last_sma20 else 'N/A'}/{round(last_sma50, 2) if last_sma50 else 'N/A'}). "
+        f"RSI(14) is at {round(last_rsi, 2) if last_rsi else 'N/A'} ({rsi_state}). "
+        f"MACD ({round(last_macd, 4)}) vs signal ({round(last_signal, 4)}) indicates a {macd_state}."
+    )
+
+    overall_bias = "bullish" if trend == "uptrend" and last_macd > last_signal else "cautious/bearish" if trend == "downtrend" and last_macd < last_signal else "mixed"
+    rsi_advice = "watch for a pullback before entry" if rsi_state == "overbought" else "watch for reversal confirmation" if rsi_state == "oversold" else "no extreme momentum signal currently"
+
+    overall_summary = (
+        f"Overall bias leans {overall_bias}. "
+        f"RSI suggests {rsi_state} conditions, so {rsi_advice}. "
+        f"Use the period range ({period_low}\u2013{period_high}) as reference support/resistance."
+    )
+
+    return {
+        "quant": quant_text,
+        "technical": technical_text,
+        "summary": overall_summary,
+        "indicators": {
+            "last_close": round(last_close, 2),
+            "sma20": round(last_sma20, 2) if last_sma20 else None,
+            "sma50": round(last_sma50, 2) if last_sma50 else None,
+            "rsi14": round(last_rsi, 2) if last_rsi else None,
+            "macd": round(last_macd, 4),
+            "macd_signal": round(last_signal, 4),
+            "volatility_pct": round(volatility, 2),
+            "sharpe": round(sharpe, 2),
+            "period_high": period_high,
+            "period_low": period_low,
+        },
+    }
+
+# ──────────────────────────────────────────────
+# FORMATTERS
+# ──────────────────────────────────────────────
+
 def fmt_vol(n):
-    if n is None: return "—"
+    if n is None: return "\u2014"
     if n >= 1e7: return f"{n/1e7:.2f}Cr"
     if n >= 1e5: return f"{n/1e5:.2f}L"
     if n >= 1e3: return f"{n/1e3:.1f}K"
     return str(int(n))
 
 def fmt_num(n):
-    if n is None: return "—"
-    if isinstance(n, float) and np.isnan(n): return "—"
+    if n is None: return "\u2014"
+    if isinstance(n, float) and np.isnan(n): return "\u2014"
     return f"{n:,.0f}"
 
 # ──────────────────────────────────────────────
@@ -317,8 +424,12 @@ def fmt_num(n):
 # ──────────────────────────────────────────────
 
 def render_tradingview(symbol, theme="dark", height=580):
-    """Embed TradingView advanced chart widget."""
-    tv_symbol = f"NSE:{symbol}"
+    tv_symbol = symbol if ":" in symbol else f"NSE:{symbol}"
+    if symbol.startswith("^"):
+        tv_map = {"^NSEI": "NSE:NIFTY", "^NSEBANK": "NSE:NIFTYBANK"}
+        tv_symbol = tv_map.get(symbol, "NSE:NIFTY")
+    elif ".NS" in symbol:
+        tv_symbol = f"NSE:{symbol.replace('.NS', '')}"
     html = f"""
     <div class="tradingview-widget-container" style="height:{height}px;width:100%;">
       <div class="tradingview-widget-container__widget" style="height:calc({height}px - 0px);width:100%;"></div>
@@ -335,12 +446,7 @@ def render_tradingview(symbol, theme="dark", height=580):
         "withdateranges": true,
         "hide_side_toolbar": false,
         "allow_symbol_change": true,
-        "studies": [
-          "STD;SMA",
-          "STD;RSI",
-          "STD;MACD",
-          "STD;Bollinger_Bands"
-        ],
+        "studies": ["STD;SMA", "STD;RSI", "STD;MACD", "STD;Bollinger_Bands"],
         "support_host": "https://www.tradingview.com"
       }}
       </script>
@@ -349,19 +455,20 @@ def render_tradingview(symbol, theme="dark", height=580):
     components.html(html, height=height)
 
 def render_tradingview_ticker(symbol, theme="dark"):
-    """Embed TradingView ticker tape widget."""
+    tv_sym = symbol.replace(".NS", "") if ".NS" in symbol else symbol
+    if symbol.startswith("^"):
+        tv_sym = "NIFTY" if symbol == "^NSEI" else "NIFTYBANK" if symbol == "^NSEBANK" else symbol
     html = f"""
     <div class="tradingview-widget-container">
       <div class="tradingview-widget-container__widget"></div>
       <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js" async>
       {{
         "symbols": [
-          {{"proName": "NSE:{symbol}", "title": "{symbol}"}},
+          {{"proName": "NSE:{tv_sym}", "title": "{tv_sym}"}},
           {{"proName": "NSE:RELIANCE", "title": "RELIANCE"}},
           {{"proName": "NSE:TCS", "title": "TCS"}},
           {{"proName": "NSE:HDFCBANK", "title": "HDFCBANK"}},
-          {{"proName": "NSE:NIFTY", "title": "NIFTY 50"}},
-          {{"proName": "NSE:BANKNIFTY", "title": "BANK NIFTY"}}
+          {{"proName": "NSE:NIFTY", "title": "NIFTY 50"}}
         ],
         "showSymbolLogo": true,
         "isTransparent": true,
@@ -375,27 +482,23 @@ def render_tradingview_ticker(symbol, theme="dark"):
     components.html(html, height=70)
 
 # ──────────────────────────────────────────────
-# VOICE NARRATION (gTTS)
+# VOICE NARRATION
 # ──────────────────────────────────────────────
 
-def build_narration(symbol_meta, broker_name=None):
-    s = symbol_meta["name"]
-    parts = [
-        f"Here's the read on {s}.",
-        "The chart is showing live TradingView data with SMA, RSI, MACD, and Bollinger Bands overlaid.",
-        "Use RSI to judge overbought or oversold conditions — above 70 typically signals overbought, below 30 oversold.",
-        "MACD crossing above its signal line is generally read as bullish momentum, and crossing below as bearish.",
-        "Bollinger Bands widen with volatility — price pressing the upper band can mean strength or exhaustion depending on volume.",
-    ]
-    if broker_name:
-        parts.append(f"Your {broker_name} connection is in demo mode right now, so no live order data is being pulled.")
+def build_narration(asset_name, summary=None):
+    parts = [f"Here's the read on {asset_name}."]
+    if summary:
+        parts.append(summary["quant"])
+        parts.append(summary["technical"])
+        parts.append(summary["summary"])
     else:
-        parts.append("No broker is connected yet, so this is chart analysis only, not account data.")
-    parts.append("Remember, none of this is financial advice — it's a read of the indicators, not a recommendation.")
+        parts.append("The chart is showing real market data with SMA, RSI, MACD, and Bollinger Bands overlaid.")
+        parts.append("Use RSI to judge overbought or oversold conditions. Above 70 signals overbought, below 30 oversold.")
+        parts.append("MACD crossing above its signal line is bullish momentum, and crossing below as bearish.")
+    parts.append("Remember, none of this is financial advice.")
     return " ".join(parts)
 
 def generate_audio(text):
-    """Generate audio from text using gTTS, return bytes."""
     try:
         from gtts import gTTS
         audio_fp = io.BytesIO()
@@ -407,7 +510,7 @@ def generate_audio(text):
         return None
 
 # ──────────────────────────────────────────────
-# PLOTLY CHARTS (for analysis tab)
+# PLOTLY CHARTS
 # ──────────────────────────────────────────────
 
 def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
@@ -447,21 +550,19 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["sup_trend_vals"], name="Support Trend",
                                  line=dict(color="#1d9e75", width=1.4, dash="dash"), opacity=0.85), row=1, col=1)
 
-    # Support / Resistance horizontal lines (matching React UI)
+    # Support / Resistance horizontal lines
     fig.add_hline(y=analysis["resistance"], line_dash="solid", line_color="#e0524f",
-                  opacity=0.5, annotation_text=f"Resistance {analysis['resistance']}",
-                  annotation_position="top left", annotation_font_size=9, row=1, col=1)
+                  opacity=0.4, row=1, col=1)
     fig.add_hline(y=analysis["support"], line_dash="solid", line_color="#1d9e75",
-                  opacity=0.5, annotation_text=f"Support {analysis['support']}",
-                  annotation_position="bottom left", annotation_font_size=9, row=1, col=1)
+                  opacity=0.4, row=1, col=1)
 
-    colors = ["#5dcaa5" if c >= o else "#f0997b" for c, o in zip(df["close"], df["open"])]
-    fig.add_trace(go.Bar(x=df["date"], y=df["volume"], name="Volume",
-                         marker_color=colors, opacity=0.85), row=2, col=1)
-
-    # Average volume dashed line (matching React VolumeChart)
-    fig.add_hline(y=analysis["avg_vol"], line_dash="dash", line_color="#7c7b76",
-                  opacity=0.7, row=2, col=1)
+    if "volume" in df.columns:
+        colors = ["#5dcaa5" if c >= o else "#f0997b" for c, o in zip(df["close"], df["open"])]
+        fig.add_trace(go.Bar(x=df["date"], y=df["volume"], name="Volume",
+                             marker_color=colors, opacity=0.85), row=2, col=1)
+        if analysis.get("avg_vol"):
+            fig.add_hline(y=analysis["avg_vol"], line_dash="dash", line_color="#7c7b76",
+                          opacity=0.7, row=2, col=1)
 
     fig.add_trace(go.Scatter(x=df["date"], y=analysis["rsi_vals"], name="RSI",
                              line=dict(color="#a89ff0", width=1.6)), row=3, col=1)
@@ -520,80 +621,39 @@ def trend_chart(df, theme="dark"):
     return fig
 
 # ──────────────────────────────────────────────
-# SESSION STATE INIT
+# SIDEBAR (shared)
 # ──────────────────────────────────────────────
 
-if "theme" not in st.session_state:
-    st.session_state.theme = "dark"
-if "connection" not in st.session_state:
-    st.session_state.connection = None
-if "credentials" not in st.session_state:
-    st.session_state.credentials = {}
-if "voice_generated" not in st.session_state:
-    st.session_state.voice_generated = None
+theme = st.session_state.theme
 
-# ──────────────────────────────────────────────
-# SIDEBAR — Settings & Broker
-# ──────────────────────────────────────────────
+st.sidebar.markdown("## \u2699\ufe0f Settings")
 
-st.sidebar.markdown("## ⚙️ Settings")
-
-# Theme toggle
 theme_col1, theme_col2 = st.sidebar.columns([1, 1])
-if theme_col1.button("🌙 Dark", use_container_width=True,
+if theme_col1.button("\U0001f319 Dark", use_container_width=True,
                      type="primary" if st.session_state.theme == "dark" else "secondary"):
     st.session_state.theme = "dark"
     st.rerun()
-if theme_col2.button("☀️ Light", use_container_width=True,
+if theme_col2.button("\u2600\ufe0f Light", use_container_width=True,
                      type="primary" if st.session_state.theme == "light" else "secondary"):
     st.session_state.theme = "light"
     st.rerun()
 
 st.sidebar.markdown("---")
 
-# Symbol selector with search
-st.sidebar.markdown("### Select Symbol")
-search_query = st.sidebar.text_input("🔍 Search", placeholder="Type symbol or name...", key="symbol_search")
-
-filtered_symbols = [s for s in SYMBOLS if
-    search_query.lower() in s["symbol"].lower() or
-    search_query.lower() in s["name"].lower()]
-
-if filtered_symbols:
-    symbol_labels = [f"{s['symbol']} — {s['name']}" for s in filtered_symbols]
-    selected_label = st.sidebar.selectbox("Stock/Index", symbol_labels, key="symbol_select")
-    selected_idx = symbol_labels.index(selected_label)
-    stock = filtered_symbols[selected_idx]
-else:
-    stock = SYMBOLS[0]
-    st.sidebar.warning("No matches found")
-
-# Candle count
-candle_count = st.sidebar.slider("Candles (simulated)", 30, 180, 120, step=10)
-
-# Indicator toggles
-st.sidebar.markdown("---")
-show_ma = st.sidebar.checkbox("Moving Averages (SMA 20/50)", value=True)
-show_bb = st.sidebar.checkbox("Bollinger Bands", value=True)
-show_trend = st.sidebar.checkbox("Trend Lines (Pivot Regression)", value=True)
-
-st.sidebar.markdown("---")
-
 # ── Broker Connection Panel ──
-st.sidebar.markdown("### 🔗 Broker Connection")
+st.sidebar.markdown("### \U0001f517 Broker Connection")
 
 if st.session_state.connection:
     conn = st.session_state.connection
-    broker_meta = next((b for b in BROKERS if b["id"] == conn["broker_id"]), None)
-    mode_label = "🟢 Live" if conn.get("mode") == "live" else "🟡 Demo"
+    mode_label = "\U0001f7e2 Live" if conn.get("mode") == "live" else "\U0001f7e1 Demo"
     st.sidebar.markdown(f"""
-    <div style='padding:10px 14px; border-radius:8px; background:{"#1a3d1a" if st.session_state.theme=="dark" else "#d4edda"}; 
-    border:1px solid {"#2a5a2a" if st.session_state.theme=="dark" else "#c3e6cb"};'>
+    <div style='padding:10px 14px; border-radius:8px; background:{"#1a3d1a" if theme=="dark" else "#d4edda"};
+    border:1px solid {"#2a5a2a" if theme=="dark" else "#c3e6cb"};'>
         <div style='font-weight:700;font-size:13px;'>{conn["name"]} {mode_label}</div>
         <div style='font-size:11px;opacity:0.7;margin-top:2px;'>Connected {conn["connected_at"]}</div>
     </div>
     """, unsafe_allow_html=True)
-    if st.sidebar.button("🔌 Disconnect", use_container_width=True):
+    if st.sidebar.button("\U0001f50c Disconnect", use_container_width=True):
         st.session_state.connection = None
         st.session_state.credentials = {}
         st.rerun()
@@ -605,9 +665,8 @@ else:
         key="broker_select"
     )
     broker_meta = next(b for b in BROKERS if b["id"] == selected_broker_id)
-    st.sidebar.caption(f"📋 {broker_meta['note']}")
+    st.sidebar.caption(f"\U0001f4cb {broker_meta['note']}")
 
-    # Credential fields
     credentials = {}
     for field in broker_meta["fields"]:
         is_secret = "secret" in field.lower() or "pin" in field.lower() or "key" in field.lower()
@@ -616,9 +675,7 @@ else:
             key=f"cred_{selected_broker_id}_{field}"
         )
 
-    if st.sidebar.button("🔗 Connect", use_container_width=True, type="primary"):
-        # In real deployment: POST to backend server.
-        # Here: demo mode since no backend configured.
+    if st.sidebar.button("\U0001f517 Connect", use_container_width=True, type="primary"):
         st.session_state.connection = {
             "broker_id": selected_broker_id,
             "name": broker_meta["name"],
@@ -626,94 +683,195 @@ else:
             "mode": "demo",
         }
         st.session_state.credentials = credentials
-        st.sidebar.success(f"✅ Connected to {broker_meta['name']} (Demo)")
+        st.sidebar.success(f"\u2705 Connected to {broker_meta['name']} (Demo)")
         st.rerun()
 
-    st.sidebar.info(
-        "⚠️ Demo mode — no real broker connection. "
-        "Point `BACKEND_BASE_URL` at your server to go live."
-    )
-
 st.sidebar.markdown("---")
-st.sidebar.caption("📊 Quant Desk — Educational use only. Not financial advice.")
+st.sidebar.caption("\U0001f4ca Quant Desk \u2014 Real data via yfinance. Not financial advice.")
 
 # ──────────────────────────────────────────────
-# MAIN CONTENT
+# WATCHLIST SCREEN
 # ──────────────────────────────────────────────
 
-theme = st.session_state.theme
+if st.session_state.selected_asset is None:
+    st.markdown("## \U0001f4ca Quant Desk")
+    st.markdown("### Watchlist \u2014 Chart kholne ke liye ek asset chuniye")
+    st.markdown("")
 
-# ── Header ──
-col_title, col_badge = st.columns([3, 1])
-with col_title:
-    st.markdown(f"## 📊 Quant Desk — {stock['symbol']} ({stock['exchange']})")
-    st.caption(f"{stock['name']} · {stock['sector']} sector")
-with col_badge:
-    if st.session_state.connection:
-        st.markdown(f"🟡 {st.session_state.connection['name']} · Demo")
+    search_query = st.text_input("\U0001f50d Search", placeholder="Type ticker or name...", key="watchlist_search")
+
+    filtered = [a for a in ASSETS if
+        search_query.lower() in a["ticker"].lower() or
+        search_query.lower() in a["name"].lower()]
+
+    if not filtered:
+        st.warning("No matches found")
     else:
-        st.markdown("⚪ No broker connected")
+        cols = st.columns(4)
+        for i, asset in enumerate(filtered):
+            with cols[i % 4]:
+                card_key = f"asset_card_{i}"
+                if st.button(
+                    f"**{asset['ticker']}**\n{asset['name']}\n{asset['type']}",
+                    key=card_key,
+                    use_container_width=True,
+                ):
+                    st.session_state.selected_asset = asset
+                    st.session_state.show_analysis = False
+                    st.session_state.analysis_result = None
+                    st.session_state.voice_generated = None
+                    st.rerun()
 
-# ── Ticker tape ──
-render_tradingview_ticker(stock["symbol"], theme)
+    st.markdown("---")
+    st.caption("\U0001f4ca Data source: yfinance (real market data) \u2014 Educational use only, not financial advice.")
 
-st.markdown("")
+# ──────────────────────────────────────────────
+# DASHBOARD SCREEN
+# ──────────────────────────────────────────────
 
-# ── Tabs ──
-tab_live, tab_analysis, tab_voice, tab_data = st.tabs([
-    "📈 Live Chart", "📊 Technical Analysis", "🔊 Voice Brief", "📋 Raw Data"
-])
+else:
+    asset = st.session_state.selected_asset
+    ticker = asset["ticker"]
 
-# ── TAB 1: Live TradingView Chart ──
-with tab_live:
-    st.markdown(f"### Live TradingView Chart — {stock['symbol']}")
-    st.caption("Real-time NSE data via TradingView. Toggle indicators (SMA, RSI, MACD, Bollinger Bands) from the chart's own menu.")
-    render_tradingview(stock["symbol"], theme, height=600)
+    # Back button in sidebar
+    if st.sidebar.button("\u2190 Back to Watchlist", use_container_width=True):
+        st.session_state.selected_asset = None
+        st.session_state.show_analysis = False
+        st.session_state.analysis_result = None
+        st.session_state.voice_generated = None
+        st.rerun()
 
-# ── TAB 2: Technical Analysis (simulated data) ──
-with tab_analysis:
-    df = gen_candles(stock["symbol"], stock["base_price"], candle_count)
+    # Period & interval selectors in sidebar
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### \U0001f4c8 Chart Settings")
+    period_options = ["1mo", "3mo", "6mo", "1y", "2y", "5y"]
+    interval_options = ["1d", "1wk", "1mo"]
+
+    period = st.sidebar.selectbox("Period", period_options, index=period_options.index(st.session_state.period), key="period_sel")
+    interval = st.sidebar.selectbox("Interval", interval_options, index=interval_options.index(st.session_state.interval), key="interval_sel")
+
+    if period != st.session_state.period:
+        st.session_state.period = period
+        st.session_state.show_analysis = False
+        st.session_state.analysis_result = None
+        st.session_state.voice_generated = None
+    if interval != st.session_state.interval:
+        st.session_state.interval = interval
+        st.session_state.show_analysis = False
+        st.session_state.analysis_result = None
+        st.session_state.voice_generated = None
+
+    # Indicator toggles
+    st.sidebar.markdown("---")
+    show_ma = st.sidebar.checkbox("Moving Averages (SMA 20/50)", value=True)
+    show_bb = st.sidebar.checkbox("Bollinger Bands", value=True)
+    show_trend = st.sidebar.checkbox("Trend Lines (Pivot Regression)", value=True)
+
+    # ── Fetch data ──
+    with st.spinner(f"Fetching real data for {ticker}..."):
+        df = fetch_ohlc(ticker, st.session_state.period, st.session_state.interval)
+
+    if df is None or len(df) < 5:
+        st.error(f"\u274c Could not fetch data for {ticker}. Please try a different period or asset.")
+        if st.button("\u2190 Back to Watchlist"):
+            st.session_state.selected_asset = None
+            st.rerun()
+        st.stop()
+
     analysis = build_analysis(df)
+    last_price = float(df["close"].iloc[-1])
 
-    # Top metrics
-    col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
-    last_price = df["close"].iloc[-1]
+    # ── Header ──
+    col_title, col_badge, col_price = st.columns([3, 1, 1])
+    with col_title:
+        st.markdown(f"## \U0001f4ca {ticker} \u2014 {asset['name']}")
+        st.caption(f"{asset['type']} \u00b7 Data via yfinance \u00b7 {st.session_state.period} / {st.session_state.interval}")
+    with col_badge:
+        if st.session_state.connection:
+            st.markdown(f"\U0001f7e1 {st.session_state.connection['name']} \u00b7 Demo")
+        else:
+            st.markdown("\u26aa No broker connected")
+    with col_price:
+        st.metric("Last Price", f"\u20b9{last_price:,.2f}" if ticker.endswith(".NS") or ticker.startswith("^") else f"${last_price:,.2f}",
+                  f"{analysis['day_change_pct']:+.2f}% today")
 
-    with col_m1:
-        st.metric("Last Price (sim)", f"₹{last_price:,.2f}", f"{analysis['day_change_pct']:+.2f}% today")
-    with col_m2:
-        st.metric("Period Change", f"{analysis['change_pct']:+.2f}%", f"over {candle_count} candles")
-    with col_m3:
-        rsi_val = analysis["last_rsi"]
-        st.metric("RSI (14)", f"{rsi_val:.1f}" if rsi_val is not None else "—")
-    with col_m4:
-        st.metric("Volume", fmt_vol(df["volume"].iloc[-1]), f"{analysis['vol_ratio']:.2f}× avg")
-    with col_m5:
-        st.metric("Volatility (ann.)", f"{analysis['annualized_vol']}%")
+    # ── Ticker tape ──
+    render_tradingview_ticker(ticker, theme)
 
-    # Verdict banner
+    st.markdown("")
+
+    # ── AI Analysis + Voice buttons (side by side, above chart) ──
+    btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 4])
+
+    with btn_col1:
+        if st.button("\u2728 AI Analysis", type="primary", use_container_width=True):
+            st.session_state.show_analysis = True
+            st.session_state.analysis_result = compute_ai_summary(df)
+            st.session_state.voice_generated = None
+
+    with btn_col2:
+        if st.button("\U0001f50a Voice Brief", use_container_width=True):
+            narration = build_narration(asset["name"],
+                st.session_state.analysis_result if st.session_state.show_analysis else None)
+            with st.spinner("Generating audio..."):
+                audio_bytes = generate_audio(narration)
+                if audio_bytes:
+                    st.session_state.voice_generated = audio_bytes
+                else:
+                    st.error("\u274c Failed to generate audio. gTTS might not be available.")
+
+    # ── Analysis summary box (shown when AI Analysis clicked) ──
+    if st.session_state.show_analysis and st.session_state.analysis_result:
+        result = st.session_state.analysis_result
+        st.markdown("#### \U0001f9ee Quant Analysis")
+        st.info(result["quant"])
+        st.markdown("#### \U0001f4ca Technical Analysis")
+        st.info(result["technical"])
+        st.markdown("#### \U0001f4cb Overall Summary")
+        st.success(result["summary"])
+
+    # ── Voice audio player ──
+    if st.session_state.voice_generated:
+        st.audio(st.session_state.voice_generated, format="audio/mp3")
+
+    # ── Verdict banner ──
     verdict_bg = "#1a4d2e" if "Bullish" in analysis["verdict"] else "#4d1a1a" if "Bearish" in analysis["verdict"] else "#333"
     st.markdown(f"""
     <div style='padding:12px 18px;border-radius:10px;background:{verdict_bg};color:#fff;text-align:center;font-size:1.1rem;font-weight:600;margin:8px 0;'>
-        {analysis['verdict']} &nbsp;|&nbsp; Bullish: {analysis['bull_signals']} &nbsp;·&nbsp; Bearish: {analysis['bear_signals']}
+        {analysis['verdict']} &nbsp;|&nbsp; Bullish: {analysis['bull_signals']} &nbsp;\u00b7&nbsp; Bearish: {analysis['bear_signals']}
     </div>
     """, unsafe_allow_html=True)
 
-    # Main candlestick chart
+    # ── Main candlestick chart ──
     st.plotly_chart(
         candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme),
         use_container_width=True,
     )
 
-    # Trend chart
-    st.markdown("#### 📈 Cumulative Return Trend")
+    # ── Top metrics row ──
+    col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
+    with col_m1:
+        st.metric("Period Change", f"{analysis['change_pct']:+.2f}%", f"over {len(df)} candles")
+    with col_m2:
+        rsi_val = analysis["last_rsi"]
+        st.metric("RSI (14)", f"{rsi_val:.1f}" if rsi_val is not None else "\u2014")
+    with col_m3:
+        st.metric("Volume", fmt_vol(df["volume"].iloc[-1]) if "volume" in df.columns else "\u2014",
+                  f"{analysis['vol_ratio']:.2f}\u00d7 avg" if "volume" in df.columns else "")
+    with col_m4:
+        st.metric("Volatility (ann.)", f"{analysis['annualized_vol']}%")
+    with col_m5:
+        st.metric("Sharpe Ratio", f"{analysis['sharpe']}")
+
+    # ── Cumulative return trend ──
+    st.markdown("#### \U0001f4c8 Cumulative Return Trend")
     st.plotly_chart(trend_chart(df, theme), use_container_width=True)
 
-    # Two-column: Indicators + Patterns
+    # ── Two-column: Indicators + Patterns ──
     col_left, col_right = st.columns(2)
 
     with col_left:
-        st.markdown("#### 📋 Technical Indicators")
+        st.markdown("#### \U0001f4cb Technical Indicators")
         ind_data = {
             "Indicator": ["SMA 20", "SMA 50", "RSI (14)", "MACD Line", "MACD Signal",
                           "MACD Histogram", "BB Upper", "BB Lower",
@@ -723,97 +881,61 @@ with tab_analysis:
                           "Annualized Volatility", "Sharpe-like Ratio"],
             "Value": [
                 fmt_num(analysis["last_sma20"]), fmt_num(analysis["last_sma50"]),
-                f"{analysis['last_rsi']:.2f}" if analysis["last_rsi"] is not None else "—",
+                f"{analysis['last_rsi']:.2f}" if analysis["last_rsi"] is not None else "\u2014",
                 fmt_num(analysis["last_macd"]), fmt_num(analysis["last_signal"]),
                 fmt_num(analysis["last_hist"]),
                 fmt_num(analysis["bb_upper"]), fmt_num(analysis["bb_lower"]),
-                f"₹{analysis['support']}", f"₹{analysis['resistance']}",
-                f"{analysis['res_trend']['slope']:+.4f}" if analysis.get('res_trend') else "—",
-                f"{analysis['sup_trend']['slope']:+.4f}" if analysis.get('sup_trend') else "—",
-                fmt_vol(analysis["avg_vol"]), f"{analysis['vol_ratio']}×",
+                f"\u20b9{analysis['support']}", f"\u20b9{analysis['resistance']}",
+                f"{analysis['res_trend']['slope']:+.4f}" if analysis.get('res_trend') else "\u2014",
+                f"{analysis['sup_trend']['slope']:+.4f}" if analysis.get('sup_trend') else "\u2014",
+                fmt_vol(analysis["avg_vol"]), f"{analysis['vol_ratio']}\u00d7",
                 f"{analysis['annualized_vol']}%", f"{analysis['sharpe']}",
             ],
         }
         st.dataframe(pd.DataFrame(ind_data), use_container_width=True, hide_index=True)
 
+        # Raw data table
+        st.markdown("---")
+        st.markdown("#### \U0001f4cb Recent Candle Data")
+        display_df = df[["date", "open", "high", "low", "close"]].copy()
+        if "volume" in df.columns:
+            display_df["volume"] = df["volume"].apply(fmt_vol)
+        display_df.columns = ["Date", "Open", "High", "Low", "Close"] + (["Volume"] if "volume" in df.columns else [])
+        display_df["Date"] = pd.to_datetime(display_df["Date"]).dt.strftime("%Y-%m-%d")
+        st.dataframe(display_df.tail(30), use_container_width=True, hide_index=True)
+
     with col_right:
-        st.markdown("#### 🔍 Candlestick Patterns")
+        st.markdown("#### \U0001f50d Candlestick Patterns")
         for p in analysis["patterns"]:
             st.markdown(f"- {p}")
 
-        st.markdown("#### 📐 Pivot Points & Trend Lines")
+        st.markdown("#### \U0001f4d0 Pivot Points & Trend Lines")
         pv = analysis.get("pivots", {"highs": [], "lows": []})
-        st.markdown(f"**Pivot Highs:** {len(pv['highs'])} · **Pivot Lows:** {len(pv['lows'])}")
+        st.markdown(f"**Pivot Highs:** {len(pv['highs'])} \u00b7 **Pivot Lows:** {len(pv['lows'])}")
         if analysis.get("res_trend"):
-            st.markdown(f"- 🔴 Resistance trend slope: `{analysis['res_trend']['slope']:+.4f}`")
+            st.markdown(f"- \U0001f534 Resistance trend slope: `{analysis['res_trend']['slope']:+.4f}`")
         if analysis.get("sup_trend"):
-            st.markdown(f"- 🟢 Support trend slope: `{analysis['sup_trend']['slope']:+.4f}`")
+            st.markdown(f"- \U0001f7e2 Support trend slope: `{analysis['sup_trend']['slope']:+.4f}`")
         if not analysis.get("res_trend") and not analysis.get("sup_trend"):
             st.markdown("- Not enough pivot points for trend lines")
 
-        st.markdown("#### 📊 Signal Summary")
+        st.markdown("#### \U0001f4ca Signal Summary")
         sig_df = pd.DataFrame({
-            "Type": ["🟢 Bullish", "🔴 Bearish", "⚖️ Net"],
+            "Type": ["\U0001f7e2 Bullish", "\U0001f534 Bearish", "\u2696\ufe0f Net"],
             "Count": [analysis["bull_signals"], analysis["bear_signals"],
                       analysis["bull_signals"] - analysis["bear_signals"]],
         })
         st.dataframe(sig_df, use_container_width=True, hide_index=True)
 
-# ── TAB 3: Voice Brief ──
-with tab_voice:
-    st.markdown("### 🔊 AI Voice Brief")
-    st.caption("Hear an AI-generated narration of the current chart setup.")
-
-    connected_broker_name = st.session_state.connection["name"] if st.session_state.connection else None
-    narration_text = build_narration(stock, connected_broker_name)
-
-    st.info("🎙️ Click below to generate and play the voice brief.")
-
-    st.markdown("**Narration preview:**")
-    st.markdown(f"> {narration_text}")
-
-    if st.button("🔊 Generate Voice Brief", type="primary"):
-        with st.spinner("Generating audio..."):
-            audio_bytes = generate_audio(narration_text)
-            if audio_bytes:
-                st.success("✅ Audio generated!")
-                st.audio(audio_bytes, format="audio/mp3")
-            else:
-                st.error("❌ Failed to generate audio. gTTS might not be available.")
-
+    # ── TradingView live chart (collapsible) ──
     st.markdown("---")
-    st.markdown("#### 📝 What the brief covers:")
-    st.markdown("""
-    - **Chart overview** — live TradingView data with key indicators
-    - **RSI interpretation** — overbought (>70) vs oversold (<30) zones
-    - **MACD signals** — bullish vs bearish momentum crossovers
-    - **Bollinger Bands** — volatility and price exhaustion signals
-    - **Broker status** — whether live or demo mode is active
-    - **Disclaimer** — educational content, not financial advice
-    """)
-
-# ── TAB 4: Raw Data ──
-with tab_data:
-    df = gen_candles(stock["symbol"], stock["base_price"], candle_count)
-    display_df = df[["date", "open", "high", "low", "close", "volume"]].copy()
-    display_df["date"] = display_df["date"].dt.strftime("%Y-%m-%d")
-    display_df.columns = ["Date", "Open", "High", "Low", "Close", "Volume"]
-    display_df["Volume"] = display_df["Volume"].apply(fmt_vol)
-    st.markdown(f"#### Recent Candle Data — {stock['symbol']}")
-    st.dataframe(display_df.tail(30), use_container_width=True, hide_index=True)
-
-    st.markdown("---")
-    st.markdown("#### ⚙️ Broker Configuration Reference")
-    broker_ref = pd.DataFrame([
-        {"Broker": b["name"], "API": b["note"], "Required Fields": ", ".join(b["fields"])}
-        for b in BROKERS
-    ])
-    st.dataframe(broker_ref, use_container_width=True, hide_index=True)
+    with st.expander("\U0001f5fa\ufe0f TradingView Live Chart (real-time NSE data)"):
+        render_tradingview(ticker, theme, height=600)
 
 # ── Footer ──
 st.markdown("---")
 footer_col1, footer_col2 = st.columns([3, 1])
 with footer_col1:
-    st.caption("📊 Quant Desk — Built with Streamlit + Plotly + TradingView + gTTS | Simulated data for educational purposes only | Not financial advice")
+    st.caption("\U0001f4ca Quant Desk \u2014 Built with Streamlit + Plotly + yfinance + gTTS | Real market data | Not financial advice")
 with footer_col2:
     st.caption("Powered by [TradingView](https://www.tradingview.com)")
