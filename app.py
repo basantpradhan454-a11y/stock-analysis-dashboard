@@ -16,6 +16,11 @@ st.set_page_config(
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded",
+    menu_items={
+        "Get Help": None,
+        "Report a Bug": None,
+        "About": "📊 Quant Desk — Stock Analysis Dashboard\nBuilt with Streamlit + Plotly + TradingView\nFor educational purposes only — not financial advice.",
+    },
 )
 
 # ──────────────────────────────────────────────
@@ -236,7 +241,7 @@ def build_analysis(df):
         "patterns": patterns, "support": support, "resistance": resistance,
         "sma20": sma20_vals, "sma50": sma50_vals,
         "rsi_vals": rsi_vals, "macd_line": macd_line, "signal_line": signal_line,
-        "hist": hist, "bb_upper": bb_upper, "bb_lower": bb_lower, "bb_mid": bb_mid,
+        "hist": hist, "bb_upper_series": bb_upper, "bb_lower_series": bb_lower, "bb_mid_series": bb_mid,
     }
 
 def fmt_vol(n):
@@ -374,9 +379,9 @@ def candlestick_chart(df, analysis, show_ma, show_bb, theme="dark"):
                                  line=dict(color="#eda100", width=1.5)), row=1, col=1)
 
     if show_bb:
-        fig.add_trace(go.Scatter(x=df["date"], y=analysis["bb_upper"], name="BB Upper",
+        fig.add_trace(go.Scatter(x=df["date"], y=analysis["bb_upper_series"], name="BB Upper",
                                  line=dict(color="#7f77dd", width=1, dash="dot"), opacity=0.8), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df["date"], y=analysis["bb_lower"], name="BB Lower",
+        fig.add_trace(go.Scatter(x=df["date"], y=analysis["bb_lower_series"], name="BB Lower",
                                  line=dict(color="#7f77dd", width=1, dash="dot"), opacity=0.8, showlegend=False), row=1, col=1)
 
     colors = ["#5dcaa5" if c >= o else "#f0997b" for c, o in zip(df["close"], df["open"])]
