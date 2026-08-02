@@ -71,7 +71,7 @@ def symbol_seed(symbol):
         s += ord(ch) * (i + 7)
     return s & 0xFFFFFFFF
 
-def gen_candles(symbol, base_price, n=90):
+def gen_candles(symbol, base_price, n=120):
     seed = symbol_seed(symbol)
     rand = mulberry32(seed)
     price = base_price * (0.9 + rand() * 0.2)
@@ -447,9 +447,21 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["sup_trend_vals"], name="Support Trend",
                                  line=dict(color="#1d9e75", width=1.4, dash="dash"), opacity=0.85), row=1, col=1)
 
+    # Support / Resistance horizontal lines (matching React UI)
+    fig.add_hline(y=analysis["resistance"], line_dash="solid", line_color="#e0524f",
+                  opacity=0.5, annotation_text=f"Resistance {analysis['resistance']}",
+                  annotation_position="top left", annotation_font_size=9, row=1, col=1)
+    fig.add_hline(y=analysis["support"], line_dash="solid", line_color="#1d9e75",
+                  opacity=0.5, annotation_text=f"Support {analysis['support']}",
+                  annotation_position="bottom left", annotation_font_size=9, row=1, col=1)
+
     colors = ["#5dcaa5" if c >= o else "#f0997b" for c, o in zip(df["close"], df["open"])]
     fig.add_trace(go.Bar(x=df["date"], y=df["volume"], name="Volume",
                          marker_color=colors, opacity=0.85), row=2, col=1)
+
+    # Average volume dashed line (matching React VolumeChart)
+    fig.add_hline(y=analysis["avg_vol"], line_dash="dash", line_color="#7c7b76",
+                  opacity=0.7, row=2, col=1)
 
     fig.add_trace(go.Scatter(x=df["date"], y=analysis["rsi_vals"], name="RSI",
                              line=dict(color="#a89ff0", width=1.6)), row=3, col=1)
@@ -557,7 +569,7 @@ else:
     st.sidebar.warning("No matches found")
 
 # Candle count
-candle_count = st.sidebar.slider("Candles (simulated)", 30, 180, 90, step=10)
+candle_count = st.sidebar.slider("Candles (simulated)", 30, 180, 120, step=10)
 
 # Indicator toggles
 st.sidebar.markdown("---")
