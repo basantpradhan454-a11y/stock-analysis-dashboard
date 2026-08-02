@@ -161,6 +161,46 @@ def detect_patterns(df):
     return patterns
 
 # ──────────────────────────────────────────────
+# PIVOT DETECTION & TREND LINES
+# ──────────────────────────────────────────────
+
+def find_pivots(df, lookback=3):
+    """Detect pivot highs and lows — local extrema over a lookback window."""
+    highs, lows = [], []
+    n = len(df)
+    for i in range(lookback, n - lookback):
+        is_high = True
+        is_low = True
+        for j in range(i - lookback, i + lookback + 1):
+            if j == i:
+                continue
+            if df["high"].iloc[j] >= df["high"].iloc[i]:
+                is_high = False
+            if df["low"].iloc[j] <= df["low"].iloc[i]:
+                is_low = False
+        if is_high:
+            highs.append({"idx": i, "price": df["high"].iloc[i]})
+        if is_low:
+            lows.append({"idx": i, "price": df["low"].iloc[i]})
+    return {"highs": highs, "lows": lows}
+
+def linear_regression(points):
+    """Compute linear regression (slope + intercept) from {idx, price} points."""
+    n_pts = len(points)
+    if n_pts < 2:
+        return None
+    sum_x = sum(p["idx"] for p in points)
+    sum_y = sum(p["price"] for p in points)
+    sum_xy = sum(p["idx"] * p["price"] for p in points)
+    sum_xx = sum(p["idx"] ** 2 for p in points)
+    denom = n_pts * sum_xx - sum_x * sum_x
+    if denom == 0:
+        return None
+    slope = (n_pts * sum_xy - sum_x * sum_y) / denom
+    intercept = (sum_y - slope * sum_x) / n_pts
+    return {"slope": slope, "intercept": intercept}
+
+# ──────────────────────────────────────────────
 # ANALYSIS
 # ──────────────────────────────────────────────
 
@@ -230,6 +270,19 @@ def build_analysis(df):
     support = round(df["low"].iloc[-20:].min(), 2)
     resistance = round(df["high"].iloc[-20:].max(), 2)
 
+    # Pivot-based trend lines (linear regression on recent pivots)
+    pivots = find_pivots(df)
+    res_trend = linear_regression(pivots["highs"][-6:]) if len(pivots["highs"]) >= 2 else None
+    sup_trend = linear_regression(pivots["lows"][-6:]) if len(pivots["lows"]) >= 2 else None
+
+    n_candles = len(df)
+    res_trend_vals = None
+    sup_trend_vals = None
+    if res_trend:
+        res_trend_vals = [round(res_trend["slope"] * i + res_trend["intercept"], 2) for i in range(n_candles)]
+    if sup_trend:
+        sup_trend_vals = [round(sup_trend["slope"] * i + sup_trend["intercept"], 2) for i in range(n_candles)]
+
     return {
         "change_pct": change_pct, "day_change_pct": day_change_pct,
         "last_rsi": last_rsi, "last_macd": last_macd, "last_signal": last_signal,
@@ -242,6 +295,9 @@ def build_analysis(df):
         "sma20": sma20_vals, "sma50": sma50_vals,
         "rsi_vals": rsi_vals, "macd_line": macd_line, "signal_line": signal_line,
         "hist": hist, "bb_upper_series": bb_upper, "bb_lower_series": bb_lower, "bb_mid_series": bb_mid,
+        "res_trend": res_trend, "sup_trend": sup_trend,
+        "res_trend_vals": res_trend_vals, "sup_trend_vals": sup_trend_vals,
+        "pivots": pivots,
     }
 
 def fmt_vol(n):
@@ -354,7 +410,7 @@ def generate_audio(text):
 # PLOTLY CHARTS (for analysis tab)
 # ──────────────────────────────────────────────
 
-def candlestick_chart(df, analysis, show_ma, show_bb, theme="dark"):
+def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
     template = "plotly_dark" if theme == "dark" else "plotly_white"
     bg_color = "rgba(0,0,0,0)" if theme == "dark" else "rgba(255,255,255,0)"
     grid_color = "rgba(50,50,50,0.3)" if theme == "dark" else "rgba(200,200,200,0.5)"
@@ -383,6 +439,13 @@ def candlestick_chart(df, analysis, show_ma, show_bb, theme="dark"):
                                  line=dict(color="#7f77dd", width=1, dash="dot"), opacity=0.8), row=1, col=1)
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["bb_lower_series"], name="BB Lower",
                                  line=dict(color="#7f77dd", width=1, dash="dot"), opacity=0.8, showlegend=False), row=1, col=1)
+
+    if show_trend and analysis.get("res_trend_vals") is not None:
+        fig.add_trace(go.Scatter(x=df["date"], y=analysis["res_trend_vals"], name="Resistance Trend",
+                                 line=dict(color="#e0524f", width=1.4, dash="dash"), opacity=0.85), row=1, col=1)
+    if show_trend and analysis.get("sup_trend_vals") is not None:
+        fig.add_trace(go.Scatter(x=df["date"], y=analysis["sup_trend_vals"], name="Support Trend",
+                                 line=dict(color="#1d9e75", width=1.4, dash="dash"), opacity=0.85), row=1, col=1)
 
     colors = ["#5dcaa5" if c >= o else "#f0997b" for c, o in zip(df["close"], df["open"])]
     fig.add_trace(go.Bar(x=df["date"], y=df["volume"], name="Volume",
@@ -500,6 +563,7 @@ candle_count = st.sidebar.slider("Candles (simulated)", 30, 180, 90, step=10)
 st.sidebar.markdown("---")
 show_ma = st.sidebar.checkbox("Moving Averages (SMA 20/50)", value=True)
 show_bb = st.sidebar.checkbox("Bollinger Bands", value=True)
+show_trend = st.sidebar.checkbox("Trend Lines (Pivot Regression)", value=True)
 
 st.sidebar.markdown("---")
 
@@ -625,7 +689,7 @@ with tab_analysis:
 
     # Main candlestick chart
     st.plotly_chart(
-        candlestick_chart(df, analysis, show_ma, show_bb, theme),
+        candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme),
         use_container_width=True,
     )
 
@@ -642,6 +706,7 @@ with tab_analysis:
             "Indicator": ["SMA 20", "SMA 50", "RSI (14)", "MACD Line", "MACD Signal",
                           "MACD Histogram", "BB Upper", "BB Lower",
                           "Support (20d low)", "Resistance (20d high)",
+                          "Resistance Trend Slope", "Support Trend Slope",
                           "Avg Volume (20d)", "Volume Ratio",
                           "Annualized Volatility", "Sharpe-like Ratio"],
             "Value": [
@@ -651,6 +716,8 @@ with tab_analysis:
                 fmt_num(analysis["last_hist"]),
                 fmt_num(analysis["bb_upper"]), fmt_num(analysis["bb_lower"]),
                 f"₹{analysis['support']}", f"₹{analysis['resistance']}",
+                f"{analysis['res_trend']['slope']:+.4f}" if analysis.get('res_trend') else "—",
+                f"{analysis['sup_trend']['slope']:+.4f}" if analysis.get('sup_trend') else "—",
                 fmt_vol(analysis["avg_vol"]), f"{analysis['vol_ratio']}×",
                 f"{analysis['annualized_vol']}%", f"{analysis['sharpe']}",
             ],
@@ -661,6 +728,16 @@ with tab_analysis:
         st.markdown("#### 🔍 Candlestick Patterns")
         for p in analysis["patterns"]:
             st.markdown(f"- {p}")
+
+        st.markdown("#### 📐 Pivot Points & Trend Lines")
+        pv = analysis.get("pivots", {"highs": [], "lows": []})
+        st.markdown(f"**Pivot Highs:** {len(pv['highs'])} · **Pivot Lows:** {len(pv['lows'])}")
+        if analysis.get("res_trend"):
+            st.markdown(f"- 🔴 Resistance trend slope: `{analysis['res_trend']['slope']:+.4f}`")
+        if analysis.get("sup_trend"):
+            st.markdown(f"- 🟢 Support trend slope: `{analysis['sup_trend']['slope']:+.4f}`")
+        if not analysis.get("res_trend") and not analysis.get("sup_trend"):
+            st.markdown("- Not enough pivot points for trend lines")
 
         st.markdown("#### 📊 Signal Summary")
         sig_df = pd.DataFrame({
