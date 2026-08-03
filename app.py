@@ -29,20 +29,47 @@ st.set_page_config(
 # ──────────────────────────────────────────────
 
 ASSETS = [
-    {"ticker": "RELIANCE.NS",   "name": "Reliance Industries",      "type": "Stock (NSE)"},
-    {"ticker": "TCS.NS",        "name": "Tata Consultancy Services","type": "Stock (NSE)"},
-    {"ticker": "HDFCBANK.NS",   "name": "HDFC Bank",               "type": "Stock (NSE)"},
-    {"ticker": "INFY.NS",       "name": "Infosys",                 "type": "Stock (NSE)"},
-    {"ticker": "ITC.NS",        "name": "ITC Ltd",                 "type": "Stock (NSE)"},
-    {"ticker": "TATAMOTORS.NS", "name": "Tata Motors",            "type": "Stock (NSE)"},
-    {"ticker": "SBIN.NS",       "name": "State Bank of India",    "type": "Stock (NSE)"},
-    {"ticker": "BHARTIARTL.NS", "name": "Bharti Airtel",          "type": "Stock (NSE)"},
-    {"ticker": "^NSEI",         "name": "Nifty 50 Index",          "type": "Index"},
-    {"ticker": "^NSEBANK",      "name": "Bank Nifty Index",       "type": "Index"},
-    {"ticker": "AAPL",          "name": "Apple Inc.",              "type": "Stock (US)"},
-    {"ticker": "BTC-USD",       "name": "Bitcoin",                 "type": "Crypto"},
-    {"ticker": "ETH-USD",       "name": "Ethereum",               "type": "Crypto"},
-    {"ticker": "GC=F",          "name": "Gold Futures",            "type": "Commodity"},
+    # India - NSE
+    {"ticker": "RELIANCE.NS",   "tv": "NSE:RELIANCE",    "name": "Reliance Industries",      "type": "NSE",  "logo": "RELIANCE"},
+    {"ticker": "TCS.NS",        "tv": "NSE:TCS",          "name": "Tata Consultancy Services","type": "NSE",  "logo": "TCS"},
+    {"ticker": "INFY.NS",       "tv": "NSE:INFY",         "name": "Infosys",                  "type": "NSE",  "logo": "INFY"},
+    {"ticker": "HDFCBANK.NS",   "tv": "NSE:HDFCBANK",     "name": "HDFC Bank",               "type": "NSE",  "logo": "HDFCBANK"},
+    {"ticker": "ICICIBANK.NS",  "tv": "NSE:ICICIBANK",    "name": "ICICI Bank",               "type": "NSE",  "logo": "ICICIBANK"},
+    {"ticker": "SBIN.NS",       "tv": "NSE:SBIN",         "name": "State Bank of India",     "type": "NSE",  "logo": "SBIN"},
+    {"ticker": "TATAMOTORS.NS", "tv": "NSE:TATAMOTORS",  "name": "Tata Motors",             "type": "NSE",  "logo": "TATAMOTORS"},
+    {"ticker": "ADANIENT.NS",   "tv": "NSE:ADANIENT",    "name": "Adani Enterprises",       "type": "NSE",  "logo": "ADANIENT"},
+    {"ticker": "BAJFINANCE.NS", "tv": "NSE:BAJFINANCE",   "name": "Bajaj Finance",           "type": "NSE",  "logo": "BAJFINANCE"},
+    {"ticker": "WIPRO.NS",      "tv": "NSE:WIPRO",        "name": "Wipro",                   "type": "NSE",  "logo": "WIPRO"},
+    {"ticker": "LT.NS",         "tv": "NSE:LT",           "name": "Larsen & Toubro",         "type": "NSE",  "logo": "LT"},
+    {"ticker": "HINDUNILVR.NS", "tv": "NSE:HINDUNILVR",  "name": "Hindustan Unilever",      "type": "NSE",  "logo": "HINDUNILVR"},
+    {"ticker": "BHARTIARTL.NS", "tv": "NSE:BHARTIARTL",  "name": "Bharti Airtel",           "type": "NSE",  "logo": "BHARTIARTL"},
+    {"ticker": "MARUTI.NS",     "tv": "NSE:MARUTI",       "name": "Maruti Suzuki",           "type": "NSE",  "logo": "MARUTI"},
+    {"ticker": "AXISBANK.NS",   "tv": "NSE:AXISBANK",    "name": "Axis Bank",               "type": "NSE",  "logo": "AXISBANK"},
+    {"ticker": "KOTAKBANK.NS",  "tv": "NSE:KOTAKBANK",    "name": "Kotak Mahindra Bank",    "type": "NSE",  "logo": "KOTAKBANK"},
+    {"ticker": "SUNPHARMA.NS",  "tv": "NSE:SUNPHARMA",   "name": "Sun Pharma",              "type": "NSE",  "logo": "SUNPHARMA"},
+    {"ticker": "ITC.NS",        "tv": "NSE:ITC",          "name": "ITC Limited",             "type": "NSE",  "logo": "ITC"},
+    {"ticker": "^NSEI",         "tv": "NSE:NIFTY",        "name": "Nifty 50 Index",          "type": "Index", "logo": "NIFTY50"},
+    {"ticker": "^NSEBANK",      "tv": "NSE:NIFTYBANK",   "name": "Bank Nifty Index",       "type": "Index", "logo": "NIFTYBANK"},
+    # US - NASDAQ / NYSE
+    {"ticker": "AAPL",          "tv": "NASDAQ:AAPL",      "name": "Apple Inc",               "type": "NASDAQ", "logo": "AAPL"},
+    {"ticker": "MSFT",          "tv": "NASDAQ:MSFT",      "name": "Microsoft",               "type": "NASDAQ", "logo": "MSFT"},
+    {"ticker": "AMZN",          "tv": "NASDAQ:AMZN",      "name": "Amazon",                  "type": "NASDAQ", "logo": "AMZN"},
+    {"ticker": "GOOGL",         "tv": "NASDAQ:GOOGL",     "name": "Alphabet (Google)",       "type": "NASDAQ", "logo": "GOOGL"},
+    {"ticker": "TSLA",          "tv": "NASDAQ:TSLA",      "name": "Tesla",                   "type": "NASDAQ", "logo": "TSLA"},
+    {"ticker": "META",          "tv": "NASDAQ:META",      "name": "Meta Platforms",          "type": "NASDAQ", "logo": "META"},
+    {"ticker": "NVDA",          "tv": "NASDAQ:NVDA",     "name": "Nvidia",                  "type": "NASDAQ", "logo": "NVDA"},
+    {"ticker": "NFLX",          "tv": "NASDAQ:NFLX",      "name": "Netflix",                 "type": "NASDAQ", "logo": "NFLX"},
+    {"ticker": "INTC",          "tv": "NASDAQ:INTC",     "name": "Intel",                   "type": "NASDAQ", "logo": "INTC"},
+    {"ticker": "KO",            "tv": "NYSE:KO",          "name": "Coca-Cola",               "type": "NYSE",   "logo": "KO"},
+    {"ticker": "WMT",           "tv": "NYSE:WMT",         "name": "Walmart",                 "type": "NYSE",   "logo": "WMT"},
+    {"ticker": "JPM",           "tv": "NYSE:JPM",         "name": "JPMorgan Chase",          "type": "NYSE",   "logo": "JPM"},
+    # Crypto
+    {"ticker": "BTC-USD",       "tv": "BINANCE:BTCUSDT",  "name": "Bitcoin",                 "type": "Crypto", "logo": "BTC"},
+    {"ticker": "ETH-USD",       "tv": "BINANCE:ETHUSDT",  "name": "Ethereum",                "type": "Crypto", "logo": "ETH"},
+    {"ticker": "SOL-USD",       "tv": "BINANCE:SOLUSDT",  "name": "Solana",                  "type": "Crypto", "logo": "SOL"},
+    {"ticker": "DOGE-USD",      "tv": "BINANCE:DOGEUSDT", "name": "Dogecoin",                "type": "Crypto", "logo": "DOGE"},
+    # Commodities
+    {"ticker": "GC=F",          "tv": "TVC:GOLD",         "name": "Gold Futures",            "type": "Commodity", "logo": "GOLD"},
 ]
 
 BROKERS = [
@@ -567,13 +594,9 @@ def fmt_num(n):
 # TRADINGVIEW EMBED
 # ──────────────────────────────────────────────
 
-def render_tradingview(symbol, theme="dark", height=580):
+def render_tradingview(symbol, theme="dark", height=600):
+    """Render TradingView advanced chart with native zoom/pan/drawing tools."""
     tv_symbol = symbol if ":" in symbol else f"NSE:{symbol}"
-    if symbol.startswith("^"):
-        tv_map = {"^NSEI": "NSE:NIFTY", "^NSEBANK": "NSE:NIFTYBANK"}
-        tv_symbol = tv_map.get(symbol, "NSE:NIFTY")
-    elif ".NS" in symbol:
-        tv_symbol = f"NSE:{symbol.replace('.NS', '')}"
     html = f"""
     <div class="tradingview-widget-container" style="height:{height}px;width:100%;">
       <div class="tradingview-widget-container__widget" style="height:calc({height}px - 0px);width:100%;"></div>
@@ -586,11 +609,12 @@ def render_tradingview(symbol, theme="dark", height=580):
         "theme": "{theme}",
         "style": "1",
         "locale": "in",
+        "toolbar_bg": "#131722",
         "enable_publishing": false,
         "withdateranges": true,
         "hide_side_toolbar": false,
         "allow_symbol_change": true,
-        "studies": ["STD;SMA", "STD;RSI", "STD;MACD", "STD;Bollinger_Bands"],
+        "studies": ["STD;SMA", "STD;RSI", "Volume@tv-basicstudies", "STD;MACD", "STD;Bollinger_Bands"],
         "support_host": "https://www.tradingview.com"
       }}
       </script>
@@ -843,10 +867,10 @@ if st.session_state.selected_asset is None:
     st.markdown("")
 
     search_query = st.text_input("\U0001f50d Search", placeholder="Type ticker or name...", key="watchlist_search")
-
     filtered = [a for a in ASSETS if
         search_query.lower() in a["ticker"].lower() or
-        search_query.lower() in a["name"].lower()]
+        search_query.lower() in a["name"].lower() or
+        search_query.lower() in a.get("tv", "").lower()]
 
     if not filtered:
         st.warning("No matches found")
@@ -854,6 +878,13 @@ if st.session_state.selected_asset is None:
         cols = st.columns(4)
         for i, asset in enumerate(filtered):
             with cols[i % 4]:
+                logo_url = f"https://s3-symbol-logo.tradingview.com/{asset.get('logo', asset['ticker']).lower()}.svg"
+                st.markdown(
+                    f'<img src="{logo_url}" width="28" height="28" '
+                    f'style="border-radius:6px;object-fit:contain;background:#fff;padding:2px;" '
+                    f'onerror="this.style.display=\'none\'">',
+                    unsafe_allow_html=True
+                )
                 card_key = f"asset_card_{i}"
                 if st.button(
                     f"**{asset['ticker']}**\n{asset['name']}\n{asset['type']}",
@@ -864,6 +895,8 @@ if st.session_state.selected_asset is None:
                     st.session_state.show_analysis = False
                     st.session_state.analysis_result = None
                     st.session_state.voice_generated = None
+                    st.session_state.backtest_result = None
+                    st.session_state.order_message = None
                     st.rerun()
 
     st.markdown("---")
@@ -1062,101 +1095,5 @@ else:
         {analysis['verdict']} &nbsp;|&nbsp; Bullish: {analysis['bull_signals']} &nbsp;\u00b7&nbsp; Bearish: {analysis['bear_signals']}
     </div>
     """, unsafe_allow_html=True)
-
-    # ── Main candlestick chart ──
-    st.plotly_chart(
-        candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme),
-        use_container_width=True,
-    )
-
-    # ── Top metrics row ──
-    col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
-    with col_m1:
-        st.metric("Period Change", f"{analysis['change_pct']:+.2f}%", f"over {len(df)} candles")
-    with col_m2:
-        rsi_val = analysis["last_rsi"]
-        st.metric("RSI (14)", f"{rsi_val:.1f}" if rsi_val is not None else "\u2014")
-    with col_m3:
-        st.metric("Volume", fmt_vol(df["volume"].iloc[-1]) if "volume" in df.columns else "\u2014",
-                  f"{analysis['vol_ratio']:.2f}\u00d7 avg" if "volume" in df.columns else "")
-    with col_m4:
-        st.metric("Volatility (ann.)", f"{analysis['annualized_vol']}%")
-    with col_m5:
-        st.metric("Sharpe Ratio", f"{analysis['sharpe']}")
-
-    # ── Cumulative return trend ──
-    st.markdown("#### \U0001f4c8 Cumulative Return Trend")
-    st.plotly_chart(trend_chart(df, theme), use_container_width=True)
-
-    # ── Two-column: Indicators + Patterns ──
-    col_left, col_right = st.columns(2)
-
-    with col_left:
-        st.markdown("#### \U0001f4cb Technical Indicators")
-        ind_data = {
-            "Indicator": ["SMA 20", "SMA 50", "RSI (14)", "MACD Line", "MACD Signal",
-                          "MACD Histogram", "BB Upper", "BB Lower",
-                          "Support (20d low)", "Resistance (20d high)",
-                          "Resistance Trend Slope", "Support Trend Slope",
-                          "Avg Volume (20d)", "Volume Ratio",
-                          "Annualized Volatility", "Sharpe-like Ratio"],
-            "Value": [
-                fmt_num(analysis["last_sma20"]), fmt_num(analysis["last_sma50"]),
-                f"{analysis['last_rsi']:.2f}" if analysis["last_rsi"] is not None else "\u2014",
-                fmt_num(analysis["last_macd"]), fmt_num(analysis["last_signal"]),
-                fmt_num(analysis["last_hist"]),
-                fmt_num(analysis["bb_upper"]), fmt_num(analysis["bb_lower"]),
-                f"\u20b9{analysis['support']}", f"\u20b9{analysis['resistance']}",
-                f"{analysis['res_trend']['slope']:+.4f}" if analysis.get('res_trend') else "\u2014",
-                f"{analysis['sup_trend']['slope']:+.4f}" if analysis.get('sup_trend') else "\u2014",
-                fmt_vol(analysis["avg_vol"]), f"{analysis['vol_ratio']}\u00d7",
-                f"{analysis['annualized_vol']}%", f"{analysis['sharpe']}",
-            ],
-        }
-        st.dataframe(pd.DataFrame(ind_data), use_container_width=True, hide_index=True)
-
-        # Raw data table
-        st.markdown("---")
-        st.markdown("#### \U0001f4cb Recent Candle Data")
-        display_df = df[["date", "open", "high", "low", "close"]].copy()
-        if "volume" in df.columns:
-            display_df["volume"] = df["volume"].apply(fmt_vol)
-        display_df.columns = ["Date", "Open", "High", "Low", "Close"] + (["Volume"] if "volume" in df.columns else [])
-        display_df["Date"] = pd.to_datetime(display_df["Date"]).dt.strftime("%Y-%m-%d")
-        st.dataframe(display_df.tail(30), use_container_width=True, hide_index=True)
-
-    with col_right:
-        st.markdown("#### \U0001f50d Candlestick Patterns")
-        for p in analysis["patterns"]:
-            st.markdown(f"- {p}")
-
-        st.markdown("#### \U0001f4d0 Pivot Points & Trend Lines")
-        pv = analysis.get("pivots", {"highs": [], "lows": []})
-        st.markdown(f"**Pivot Highs:** {len(pv['highs'])} \u00b7 **Pivot Lows:** {len(pv['lows'])}")
-        if analysis.get("res_trend"):
-            st.markdown(f"- \U0001f534 Resistance trend slope: `{analysis['res_trend']['slope']:+.4f}`")
-        if analysis.get("sup_trend"):
-            st.markdown(f"- \U0001f7e2 Support trend slope: `{analysis['sup_trend']['slope']:+.4f}`")
-        if not analysis.get("res_trend") and not analysis.get("sup_trend"):
-            st.markdown("- Not enough pivot points for trend lines")
-
-        st.markdown("#### \U0001f4ca Signal Summary")
-        sig_df = pd.DataFrame({
-            "Type": ["\U0001f7e2 Bullish", "\U0001f534 Bearish", "\u2696\ufe0f Net"],
-            "Count": [analysis["bull_signals"], analysis["bear_signals"],
-                      analysis["bull_signals"] - analysis["bear_signals"]],
-        })
-        st.dataframe(sig_df, use_container_width=True, hide_index=True)
-
-    # ── TradingView live chart (collapsible) ──
-    st.markdown("---")
-    with st.expander("\U0001f5fa\ufe0f TradingView Live Chart (real-time NSE data)"):
-        render_tradingview(ticker, theme, height=600)
-
-# ── Footer ──
-st.markdown("---")
-footer_col1, footer_col2 = st.columns([3, 1])
-with footer_col1:
-    st.caption("\U0001f4ca Quant Desk \u2014 Signal Engine + Backtester + Broker Sandbox | Streamlit + Plotly + yfinance | Not financial advice")
-with footer_col2:
-    st.caption("Powered by [TradingView](https://www.tradingview.com)")
+    # -- Main chart (TradingView with native zoom) --
+    st.markdown("#### Live Chart (scroll to zoom, drag to pan)")
