@@ -75,6 +75,10 @@ if "period" not in st.session_state:
     st.session_state.period = "6mo"
 if "interval" not in st.session_state:
     st.session_state.interval = "1d"
+if "backtest_result" not in st.session_state:
+    st.session_state.backtest_result = None
+if "order_message" not in st.session_state:
+    st.session_state.order_message = None
 
 # ──────────────────────────────────────────────
 # DATA FETCH (yfinance)
@@ -406,6 +410,146 @@ def compute_ai_summary(df):
 # ──────────────────────────────────────────────
 # FORMATTERS
 # ──────────────────────────────────────────────
+
+# ──────────────────────────────────────────────
+# SIGNAL ENGINE (SMA crossover + RSI + MACD)
+# ──────────────────────────────────────────────
+
+def generate_signals(df, rsi_buy=40, rsi_sell=65):
+    """Rule-based BUY/SELL/HOLD signals using SMA crossover + RSI + MACD."""
+    df = df.copy()
+    df["sma_fast"] = df["close"].rolling(20).mean()
+    df["sma_slow"] = df["close"].rolling(50).mean()
+
+    delta = df["close"].diff()
+    gain = delta.clip(lower=0).rolling(14).mean()
+    loss = (-delta.clip(upper=0)).rolling(14).mean()
+    rs = gain / loss
+    df["rsi_sig"] = 100 - (100 / (1 + rs))
+
+    ema12 = df["close"].ewm(span=12, adjust=False).mean()
+    ema26 = df["close"].ewm(span=26, adjust=False).mean()
+    df["macd_sig"] = ema12 - ema26
+    df["macd_sig_signal"] = df["macd_sig"].ewm(span=9, adjust=False).mean()
+
+    df["signal"] = "HOLD"
+    buy_cond = (df["sma_fast"] > df["sma_slow"]) & (df["rsi_sig"] < rsi_buy) & (df["macd_sig"] > df["macd_sig_signal"])
+    sell_cond = (df["sma_fast"] < df["sma_slow"]) | (df["rsi_sig"] > rsi_sell) | (df["macd_sig"] < df["macd_sig_signal"])
+    df.loc[buy_cond, "signal"] = "BUY"
+    df.loc[sell_cond & ~buy_cond, "signal"] = "SELL"
+    return df
+
+def latest_signal(df):
+    """Return the latest signal dict."""
+    sig_df = generate_signals(df)
+    last = sig_df.iloc[-1]
+    return {
+        "signal": last["signal"],
+        "close": round(float(last["close"]), 2),
+        "sma_fast": round(float(last["sma_fast"]), 2) if not pd.isna(last["sma_fast"]) else None,
+        "sma_slow": round(float(last["sma_slow"]), 2) if not pd.isna(last["sma_slow"]) else None,
+        "rsi": round(float(last["rsi_sig"]), 2) if not pd.isna(last["rsi_sig"]) else None,
+        "macd": round(float(last["macd_sig"]), 4) if not pd.isna(last["macd_sig"]) else None,
+        "macd_signal": round(float(last["macd_sig_signal"]), 4) if not pd.isna(last["macd_sig_signal"]) else None,
+    }
+
+# ──────────────────────────────────────────────
+# BACKTESTER
+# ──────────────────────────────────────────────
+
+def run_backtest(df, initial_cash=100000.0, qty_per_trade=10):
+    """Simulate the signal strategy on historical data."""
+    sig_df = generate_signals(df).dropna(subset=["sma_slow"]).reset_index(drop=True)
+
+    cash = initial_cash
+    position = 0
+    trades = []
+    equity_curve = []
+
+    for _, row in sig_df.iterrows():
+        price = float(row["close"])
+        date = str(row["date"]) if "date" in row else str(row.name)
+
+        if row["signal"] == "BUY" and cash >= price * qty_per_trade:
+            cash -= price * qty_per_trade
+            position += qty_per_trade
+            trades.append({"date": date, "action": "BUY", "price": round(price, 2), "qty": qty_per_trade})
+        elif row["signal"] == "SELL" and position > 0:
+            cash += price * position
+            trades.append({"date": date, "action": "SELL", "price": round(price, 2), "qty": position})
+            position = 0
+
+        equity = cash + position * price
+        equity_curve.append({"date": date, "equity": round(equity, 2)})
+
+    final_price = float(sig_df.iloc[-1]["close"])
+    final_equity = cash + position * final_price
+    total_return_pct = ((final_equity - initial_cash) / initial_cash) * 100
+
+    equity_series = pd.Series([e["equity"] for e in equity_curve])
+    running_max = equity_series.cummax()
+    drawdown = (equity_series - running_max) / running_max * 100
+    max_drawdown_pct = round(float(drawdown.min()), 2) if len(drawdown) else 0
+
+    completed = [t for t in trades if t["action"] == "SELL"]
+    wins = 0
+    buy_stack = []
+    for t in trades:
+        if t["action"] == "BUY":
+            buy_stack.append(t["price"])
+        elif t["action"] == "SELL" and buy_stack:
+            avg_buy = sum(buy_stack) / len(buy_stack)
+            if t["price"] > avg_buy:
+                wins += 1
+            buy_stack = []
+
+    win_rate = round((wins / len(completed)) * 100, 2) if completed else 0
+
+    return {
+        "initial_cash": initial_cash,
+        "final_equity": round(final_equity, 2),
+        "total_return_pct": round(total_return_pct, 2),
+        "max_drawdown_pct": max_drawdown_pct,
+        "total_trades": len(trades),
+        "win_rate_pct": win_rate,
+        "trades": trades[-20:],
+        "equity_curve": equity_curve,
+    }
+
+def equity_curve_chart(equity_curve, theme="dark"):
+    """Plotly chart for backtest equity curve."""
+    template = "plotly_dark" if theme == "dark" else "plotly_white"
+    bg_color = "rgba(0,0,0,0)" if theme == "dark" else "rgba(255,255,255,0)"
+    dates = [e["date"] for e in equity_curve]
+    values = [e["equity"] for e in equity_curve]
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=dates, y=values, name="Equity",
+        fill="tozeroy", fillcolor="rgba(42,120,214,0.12)",
+        line=dict(color="#2a78d6", width=2),
+    ))
+    fig.update_layout(template=template, height=280,
+                      margin=dict(l=50, r=20, t=20, b=30),
+                      yaxis_title="Equity", showlegend=False,
+                      font=dict(size=11), paper_bgcolor=bg_color, plot_bgcolor=bg_color)
+    fig.update_xaxes(showgrid=False)
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="rgba(50,50,50,0.3)" if theme == "dark" else "rgba(200,200,200,0.5)")
+    return fig
+
+# ──────────────────────────────────────────────
+# BROKER CONNECTOR (Sandbox mode)
+# ──────────────────────────────────────────────
+
+SANDBOX_MODE = True
+
+def place_order_simulated(ticker, side, qty=10):
+    """Sandbox order placement - no real orders."""
+    if SANDBOX_MODE:
+        return {
+            "status": "SIMULATED",
+            "message": f"[SANDBOX] Would {side} {qty} of {ticker} (MARKET). No real order placed.",
+        }
+    return {"status": "ERROR", "message": "Live trading not implemented."}
 
 def fmt_vol(n):
     if n is None: return "\u2014"
@@ -739,6 +883,8 @@ else:
         st.session_state.show_analysis = False
         st.session_state.analysis_result = None
         st.session_state.voice_generated = None
+        st.session_state.backtest_result = None
+        st.session_state.order_message = None
         st.rerun()
 
     # Period & interval selectors in sidebar
@@ -760,6 +906,8 @@ else:
         st.session_state.show_analysis = False
         st.session_state.analysis_result = None
         st.session_state.voice_generated = None
+        st.session_state.backtest_result = None
+        st.session_state.order_message = None
 
     # Indicator toggles
     st.sidebar.markdown("---")
@@ -781,11 +929,22 @@ else:
     analysis = build_analysis(df)
     last_price = float(df["close"].iloc[-1])
 
-    # ── Header ──
-    col_title, col_badge, col_price = st.columns([3, 1, 1])
+    # -- Compute signal --
+    sig = latest_signal(df)
+    sig_colors = {"BUY": "#0ca30c", "SELL": "#d03b3b", "HOLD": "#898781"}
+    sig_color = sig_colors.get(sig["signal"], "#898781")
+
+    # -- Header --
+    col_title, col_signal, col_badge, col_price = st.columns([3, 1, 1, 1])
     with col_title:
         st.markdown(f"## \U0001f4ca {ticker} \u2014 {asset['name']}")
         st.caption(f"{asset['type']} \u00b7 Data via yfinance \u00b7 {st.session_state.period} / {st.session_state.interval}")
+    with col_signal:
+        st.markdown(f"""
+        <div style='text-align:center;padding:8px 16px;border-radius:20px;background:{sig_color}22;color:{sig_color};font-size:1.1rem;font-weight:700;'>
+            {sig['signal']}
+        </div>
+        """, unsafe_allow_html=True)
     with col_badge:
         if st.session_state.connection:
             st.markdown(f"\U0001f7e1 {st.session_state.connection['name']} \u00b7 Demo")
@@ -801,7 +960,21 @@ else:
     st.markdown("")
 
     # ── AI Analysis + Voice buttons (side by side, above chart) ──
-    btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 4])
+    # -- Signal metrics row --
+    sig_col1, sig_col2, sig_col3, sig_col4 = st.columns(4)
+    with sig_col1:
+        st.metric("Signal: " + sig["signal"], f"\u20b9{sig['close']:,.2f}")
+    with sig_col2:
+        st.metric("SMA 20", f"{sig['sma_fast']:.2f}" if sig['sma_fast'] else "\u2014")
+    with sig_col3:
+        st.metric("SMA 50", f"{sig['sma_slow']:.2f}" if sig['sma_slow'] else "\u2014")
+    with sig_col4:
+        st.metric("RSI (14)", f"{sig['rsi']:.1f}" if sig['rsi'] else "\u2014")
+
+    st.markdown("")
+
+    # -- AI Analysis + Voice + Backtest + Order buttons --
+    btn_col1, btn_col2, btn_col3, btn_col4, btn_col5 = st.columns([1, 1, 1, 1, 1])
 
     with btn_col1:
         if st.button("\u2728 AI Analysis", type="primary", use_container_width=True):
@@ -820,6 +993,25 @@ else:
                 else:
                     st.error("\u274c Failed to generate audio. gTTS might not be available.")
 
+    with btn_col3:
+        if st.button("\U0001f504 Run Backtest", use_container_width=True):
+            with st.spinner("Running backtest simulation..."):
+                bt_df = fetch_ohlc(ticker, "1y", "1d")
+                if bt_df is not None and len(bt_df) > 50:
+                    st.session_state.backtest_result = run_backtest(bt_df)
+                else:
+                    st.error("\u274c Not enough data for backtest.")
+
+    with btn_col4:
+        if st.button("\U0001f7e2 Sim BUY", use_container_width=True):
+            result = place_order_simulated(ticker, "BUY", 10)
+            st.session_state.order_message = result["message"]
+
+    with btn_col5:
+        if st.button("\U0001f7e3 Sim SELL", use_container_width=True):
+            result = place_order_simulated(ticker, "SELL", 10)
+            st.session_state.order_message = result["message"]
+
     # ── Analysis summary box (shown when AI Analysis clicked) ──
     if st.session_state.show_analysis and st.session_state.analysis_result:
         result = st.session_state.analysis_result
@@ -833,6 +1025,35 @@ else:
     # ── Voice audio player ──
     if st.session_state.voice_generated:
         st.audio(st.session_state.voice_generated, format="audio/mp3")
+
+    # -- Order message (sandbox) --
+    if st.session_state.order_message:
+        st.info(f"\U0001f7e0 {st.session_state.order_message}")
+
+    # -- Backtest results --
+    if st.session_state.backtest_result:
+        bt = st.session_state.backtest_result
+        st.markdown("#### \U0001f4c8 Backtest Results (1 year, sandbox simulation)")
+
+        bt_col1, bt_col2, bt_col3, bt_col4 = st.columns(4)
+        with bt_col1:
+            st.metric("Final Equity", f"\u20b9{bt['final_equity']:,.2f}")
+        with bt_col2:
+            st.metric("Total Return", f"{bt['total_return_pct']:+.2f}%")
+        with bt_col3:
+            st.metric("Max Drawdown", f"{bt['max_drawdown_pct']:.2f}%")
+        with bt_col4:
+            st.metric("Win Rate", f"{bt['win_rate_pct']:.1f}%")
+
+        st.caption(f"{bt['total_trades']} total trades simulated. Initial cash: \u20b9{bt['initial_cash']:,.0f}. Historical simulation, not a guarantee of future results.")
+
+        st.plotly_chart(equity_curve_chart(bt["equity_curve"], theme), use_container_width=True)
+
+        if bt["trades"]:
+            st.markdown("##### Last 20 Trades")
+            trades_df = pd.DataFrame(bt["trades"])
+            st.dataframe(trades_df, use_container_width=True, hide_index=True)
+
 
     # ── Verdict banner ──
     verdict_bg = "#1a4d2e" if "Bullish" in analysis["verdict"] else "#4d1a1a" if "Bearish" in analysis["verdict"] else "#333"
@@ -936,6 +1157,6 @@ else:
 st.markdown("---")
 footer_col1, footer_col2 = st.columns([3, 1])
 with footer_col1:
-    st.caption("\U0001f4ca Quant Desk \u2014 Built with Streamlit + Plotly + yfinance + gTTS | Real market data | Not financial advice")
+    st.caption("\U0001f4ca Quant Desk \u2014 Signal Engine + Backtester + Broker Sandbox | Streamlit + Plotly + yfinance | Not financial advice")
 with footer_col2:
     st.caption("Powered by [TradingView](https://www.tradingview.com)")
