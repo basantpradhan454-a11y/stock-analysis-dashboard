@@ -1095,5 +1095,108 @@ else:
         {analysis['verdict']} &nbsp;|&nbsp; Bullish: {analysis['bull_signals']} &nbsp;\u00b7&nbsp; Bearish: {analysis['bear_signals']}
     </div>
     """, unsafe_allow_html=True)
-    # -- Main chart (TradingView with native zoom) --
-    st.markdown("#### Live Chart (scroll to zoom, drag to pan)")
+    # ── Main candlestick chart (improved zoom) ──
+    st.plotly_chart(
+        candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme),
+        use_container_width=True,
+        config={
+            "scrollZoom": True,
+            "displayModeBar": True,
+            "displaylogo": False,
+            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
+        },
+    )
+
+    # ── Top metrics row ──
+    col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
+    with col_m1:
+        st.metric("Period Change", f"{analysis['change_pct']:+.2f}%", f"over {len(df)} candles")
+    with col_m2:
+        rsi_val = analysis["last_rsi"]
+        st.metric("RSI (14)", f"{rsi_val:.1f}" if rsi_val is not None else "\u2014")
+    with col_m3:
+        st.metric("Volume", fmt_vol(df["volume"].iloc[-1]) if "volume" in df.columns else "\u2014",
+                  f"{analysis['vol_ratio']:.2f}\u00d7 avg" if "volume" in df.columns else "")
+    with col_m4:
+        st.metric("Volatility (ann.)", f"{analysis['annualized_vol']}%")
+    with col_m5:
+        st.metric("Sharpe Ratio", f"{analysis['sharpe']}")
+
+    # ── Cumulative return trend ──
+    st.markdown("#### \U0001f4c8 Cumulative Return Trend")
+    st.plotly_chart(trend_chart(df, theme), use_container_width=True,
+        config={"scrollZoom": True, "displayModeBar": True, "displaylogo": False})
+
+    # ── Two-column: Indicators + Patterns ──
+    col_left, col_right = st.columns(2)
+
+    with col_left:
+        st.markdown("#### \U0001f4cb Technical Indicators")
+        ind_data = {
+            "Indicator": ["SMA 20", "SMA 50", "RSI (14)", "MACD Line", "MACD Signal",
+                          "MACD Histogram", "BB Upper", "BB Lower",
+                          "Support (20d low)", "Resistance (20d high)",
+                          "Resistance Trend Slope", "Support Trend Slope",
+                          "Avg Volume (20d)", "Volume Ratio",
+                          "Annualized Volatility", "Sharpe-like Ratio"],
+            "Value": [
+                fmt_num(analysis["last_sma20"]), fmt_num(analysis["last_sma50"]),
+                f"{analysis['last_rsi']:.2f}" if analysis["last_rsi"] is not None else "\u2014",
+                fmt_num(analysis["last_macd"]), fmt_num(analysis["last_signal"]),
+                fmt_num(analysis["last_hist"]),
+                fmt_num(analysis["bb_upper"]), fmt_num(analysis["bb_lower"]),
+                f"\u20b9{analysis['support']}", f"\u20b9{analysis['resistance']}",
+                f"{analysis['res_trend']['slope']:+.4f}" if analysis.get('res_trend') else "\u2014",
+                f"{analysis['sup_trend']['slope']:+.4f}" if analysis.get('sup_trend') else "\u2014",
+                fmt_vol(analysis["avg_vol"]), f"{analysis['vol_ratio']}\u00d7",
+                f"{analysis['annualized_vol']}%", f"{analysis['sharpe']}",
+            ],
+        }
+        st.dataframe(pd.DataFrame(ind_data), use_container_width=True, hide_index=True)
+
+        # Raw data table
+        st.markdown("---")
+        st.markdown("#### \U0001f4cb Recent Candle Data")
+        display_df = df[["date", "open", "high", "low", "close"]].copy()
+        if "volume" in df.columns:
+            display_df["volume"] = df["volume"].apply(fmt_vol)
+        display_df.columns = ["Date", "Open", "High", "Low", "Close"] + (["Volume"] if "volume" in df.columns else [])
+        display_df["Date"] = pd.to_datetime(display_df["Date"]).dt.strftime("%Y-%m-%d")
+        st.dataframe(display_df.tail(30), use_container_width=True, hide_index=True)
+
+    with col_right:
+        st.markdown("#### \U0001f50d Candlestick Patterns")
+        for p in analysis["patterns"]:
+            st.markdown(f"- {p}")
+
+        st.markdown("#### \U0001f4d0 Pivot Points & Trend Lines")
+        pv = analysis.get("pivots", {"highs": [], "lows": []})
+        st.markdown(f"**Pivot Highs:** {len(pv['highs'])} \u00b7 **Pivot Lows:** {len(pv['lows'])}")
+        if analysis.get("res_trend"):
+            st.markdown(f"- \U0001f534 Resistance trend slope: `{analysis['res_trend']['slope']:+.4f}`")
+        if analysis.get("sup_trend"):
+            st.markdown(f"- \U0001f7e2 Support trend slope: `{analysis['sup_trend']['slope']:+.4f}`")
+        if not analysis.get("res_trend") and not analysis.get("sup_trend"):
+            st.markdown("- Not enough pivot points for trend lines")
+
+        st.markdown("#### \U0001f4ca Signal Summary")
+        sig_df = pd.DataFrame({
+            "Type": ["\U0001f7e2 Bullish", "\U0001f534 Bearish", "\u2696\ufe0f Net"],
+            "Count": [analysis["bull_signals"], analysis["bear_signals"],
+                      analysis["bull_signals"] - analysis["bear_signals"]],
+        })
+        st.dataframe(sig_df, use_container_width=True, hide_index=True)
+
+    # ── TradingView live chart (collapsible) ──
+    st.markdown("---")
+    with st.expander("\U0001f5fa\ufe0f TradingView Live Chart (real-time data, native zoom)"):
+        render_tradingview(asset.get("tv", ticker), theme, height=600)
+
+# ── Footer ──
+st.markdown("---")
+footer_col1, footer_col2 = st.columns([3, 1])
+with footer_col1:
+    st.caption("Quant Desk -- Signal Engine + Backtester + Broker Sandbox | Streamlit + Plotly + yfinance | Not financial advice")
+with footer_col2:
+    st.caption("Powered by [TradingView](https://www.tradingview.com)")
+
