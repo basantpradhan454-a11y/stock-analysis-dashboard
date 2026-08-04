@@ -164,8 +164,10 @@ def _render_chart():
         </div>
     </div>""", unsafe_allow_html=True)
 
-    # TradingView widget
-    from app import render_tradingview, render_tradingview_fullscreen
+    # TradingView widget (self-contained, no import from app.py)
+    import streamlit.components.v1 as _components
+    tv_symbol = selected["symbol"] if ":" in selected["symbol"] else f"NSE:{selected['symbol']}"
+
     col1, col2 = st.columns([4, 1])
     with col2:
         if st.button("\U0001f5fa\ufe0f Open Fullscreen", key="qt_chart_fs", use_container_width=True):
@@ -173,9 +175,62 @@ def _render_chart():
             st.rerun()
 
     if st.session_state.get("qt_fullscreen", False):
-        render_tradingview_fullscreen(selected["symbol"], "dark")
+        html = f'''
+        <div id="tv-fs" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;background:#131722;">
+          <div class="tradingview-widget-container" style="height:100vh;width:100vw;">
+            <div class="tradingview-widget-container__widget" style="height:100vh;width:100vw;"></div>
+            <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+            {{
+              "autosize": true,
+              "symbol": "{tv_symbol}",
+              "interval": "D",
+              "timezone": "Asia/Kolkata",
+              "theme": "dark",
+              "style": "1",
+              "locale": "in",
+              "toolbar_bg": "#131722",
+              "enable_publishing": false,
+              "withdateranges": true,
+              "hide_side_toolbar": false,
+              "allow_symbol_change": true,
+              "studies": ["STD;SMA", "STD;RSI", "Volume@tv-basicstudies", "STD;MACD", "STD;Bollinger_Bands"],
+              "support_host": "https://www.tradingview.com"
+            }}
+            </script>
+          </div>
+          <button onclick="var e=document.getElementById('tv-fs');e.parentNode.removeChild(e);document.body.style.overflow='';" style="position:fixed;top:12px;right:12px;z-index:100000;background:#ef4444;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;font-weight:600;">\u2716 Close</button>
+        </div>
+        <script>document.body.style.overflow='hidden';</script>
+        '''
+        _components.html(html, height=1000)
+        if st.button("Exit Fullscreen", key="qt_fs_exit", type="secondary"):
+            st.session_state["qt_fullscreen"] = False
+            st.rerun()
     else:
-        render_tradingview(selected["symbol"], "dark", height=560)
+        html = f'''
+        <div class="tradingview-widget-container" style="height:560px;width:100%;">
+          <div class="tradingview-widget-container__widget" style="height:560px;width:100%;"></div>
+          <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+          {{
+            "autosize": true,
+            "symbol": "{tv_symbol}",
+            "interval": "D",
+            "timezone": "Asia/Kolkata",
+            "theme": "dark",
+            "style": "1",
+            "locale": "in",
+            "toolbar_bg": "#131722",
+            "enable_publishing": false,
+            "withdateranges": true,
+            "hide_side_toolbar": false,
+            "allow_symbol_change": true,
+            "studies": ["STD;SMA", "STD;RSI", "Volume@tv-basicstudies", "STD;MACD", "STD;Bollinger_Bands"],
+            "support_host": "https://www.tradingview.com"
+          }}
+          </script>
+        </div>
+        '''
+        _components.html(html, height=560)
 
     # Quick switch buttons
     st.markdown("#### Quick switch")
@@ -324,7 +379,15 @@ def _render_optionpricer():
     st.markdown("## \u03a9 Options Pricer (Black-Scholes)")
     st.caption("Price European call and put options using the Black-Scholes-Merton model.")
 
-    from scipy.stats import norm as _norm
+    # Pure Python normal distribution (no scipy needed)
+    import math as _m2
+    def _norm_cdf(x):
+        return 0.5 * (1 + _m2.erf(x / _m2.sqrt(2)))
+    def _norm_pdf(x):
+        return _m2.exp(-x**2 / 2) / _m2.sqrt(2 * _m.pi)
+    class _norm:
+        cdf = staticmethod(_norm_cdf)
+        pdf = staticmethod(_norm_pdf)
 
     c1, c2, c3, c4, c5 = st.columns(5)
     with c1: S = st.number_input("Spot Price (S)", value=100.0, step=0.5, format="%.2f", key="qt_op_S")
@@ -477,7 +540,15 @@ def _render_montecarlo():
 # ═══════════════════════════════════════════════════════════════════════════
 def _render_var():
     import yfinance as yf
-    from scipy.stats import norm as _norm
+    # Pure Python normal distribution (no scipy needed)
+    import math as _m2
+    def _norm_cdf(x):
+        return 0.5 * (1 + _m2.erf(x / _m2.sqrt(2)))
+    def _norm_pdf(x):
+        return _m2.exp(-x**2 / 2) / _m2.sqrt(2 * _m.pi)
+    class _norm:
+        cdf = staticmethod(_norm_cdf)
+        pdf = staticmethod(_norm_pdf)
     st.markdown("## \u26a0\ufe0f Value at Risk (VaR)")
     st.caption("Estimate potential portfolio losses using historical and parametric methods.")
 

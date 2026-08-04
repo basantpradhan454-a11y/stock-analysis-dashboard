@@ -9,7 +9,18 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
-from scipy.stats import norm
+# Normal distribution functions (no scipy needed)
+import math as _m
+
+def _norm_cdf(x):
+    return 0.5 * (1 + _m.erf(x / _m.sqrt(2)))
+
+def _norm_pdf(x):
+    return _m.exp(-x**2 / 2) / _m.sqrt(2 * _m.pi)
+
+class norm:
+    cdf = staticmethod(_norm_cdf)
+    pdf = staticmethod(_norm_pdf)
 import math
 
 # ═══════════════════════════════════════════════════════════════════════════
