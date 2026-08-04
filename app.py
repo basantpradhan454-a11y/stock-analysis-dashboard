@@ -18,8 +18,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        "Get Help": None,
-        "Report a Bug": None,
         "About": "📊 Quant Desk — Stock Analysis Dashboard\nBuilt with Streamlit + Plotly + yfinance\nFor educational purposes only — not financial advice.",
     },
 )
@@ -72,6 +70,25 @@ ASSETS = [
     {"ticker": "GC=F",          "tv": "TVC:GOLD",         "name": "Gold Futures",            "type": "Commodity", "logo": "GOLD"},
 ]
 
+# ── Navigation Tabs ──
+NAV_TABS = ["Dashboard", "Strategy Bot", "Backtester", "Portfolio", "Trading Bot"]
+active_tab = st.sidebar.selectbox("Navigate", NAV_TABS, key="nav_tab")
+
+if active_tab != "Dashboard":
+    if active_tab == "Strategy Bot":
+        from modules.strategy_bot import render_strategy_bot
+        render_strategy_bot()
+    elif active_tab == "Backtester":
+        from modules.backtester import render_backtester
+        render_backtester()
+    elif active_tab == "Portfolio":
+        from modules.portfolio_tracker import render_portfolio_tracker
+        render_portfolio_tracker()
+    elif active_tab == "Trading Bot":
+        from modules.trading_bot import render_trading_bot
+        render_trading_bot()
+    st.stop()
+
 BROKERS = [
     {"id": "zerodha",  "name": "Zerodha Kite", "note": "Kite Connect API",       "fields": ["API Key", "API Secret"]},
     {"id": "upstox",   "name": "Upstox",      "note": "Upstox API v2",          "fields": ["API Key", "API Secret", "Redirect URI"]},
@@ -99,7 +116,7 @@ if "connection" not in st.session_state:
 if "credentials" not in st.session_state:
     st.session_state.credentials = {}
 if "period" not in st.session_state:
-    st.session_state.period = "6mo"
+    st.session_state.period = "10y"
 if "interval" not in st.session_state:
     st.session_state.interval = "1d"
 if "backtest_result" not in st.session_state:
@@ -920,34 +937,9 @@ else:
         st.session_state.order_message = None
         st.rerun()
 
-    # Period & interval selectors in sidebar
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### \U0001f4c8 Chart Settings")
-    period_options = ["1mo", "3mo", "6mo", "1y", "2y", "5y"]
-    interval_options = ["1d", "1wk", "1mo"]
-
-    period = st.sidebar.selectbox("Period", period_options, index=period_options.index(st.session_state.period), key="period_sel")
-    interval = st.sidebar.selectbox("Interval", interval_options, index=interval_options.index(st.session_state.interval), key="interval_sel")
-
-    if period != st.session_state.period:
-        st.session_state.period = period
-        st.session_state.show_analysis = False
-        st.session_state.analysis_result = None
-        st.session_state.voice_generated = None
-    if interval != st.session_state.interval:
-        st.session_state.interval = interval
-        st.session_state.show_analysis = False
-        st.session_state.analysis_result = None
-        st.session_state.voice_generated = None
-        st.session_state.backtest_result = None
-        st.session_state.order_message = None
-
-    # Indicator toggles
-    st.sidebar.markdown("---")
-    show_ma = st.sidebar.checkbox("Moving Averages (SMA 20/50)", value=True)
-    show_bb = st.sidebar.checkbox("Bollinger Bands", value=True)
-    show_trend = st.sidebar.checkbox("Trend Lines (Pivot Regression)", value=True)
-
+    # Period fixed to 10y (live + historical)
+    st.session_state.period = "10y"
+    st.session_state.interval = "1d"
     # ── Fetch data ──
     with st.spinner(f"Fetching real data for {ticker}..."):
         df = fetch_ohlc(ticker, st.session_state.period, st.session_state.interval)
@@ -1095,18 +1087,9 @@ else:
         {analysis['verdict']} &nbsp;|&nbsp; Bullish: {analysis['bull_signals']} &nbsp;\u00b7&nbsp; Bearish: {analysis['bear_signals']}
     </div>
     """, unsafe_allow_html=True)
-    # ── Main candlestick chart (improved zoom) ──
-    st.plotly_chart(
-        candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme),
-        use_container_width=True,
-        config={
-            "scrollZoom": True,
-            "displayModeBar": True,
-            "displaylogo": False,
-            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
-        },
-    )
-
+    # ── Main chart - TradingView with native zoom ──
+    st.markdown("#### Live Chart (scroll to zoom, drag to pan)")
+    render_tradingview(asset.get("tv", ticker), theme, height=600)
     # ── Top metrics row ──
     col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
     with col_m1:
@@ -1121,11 +1104,6 @@ else:
         st.metric("Volatility (ann.)", f"{analysis['annualized_vol']}%")
     with col_m5:
         st.metric("Sharpe Ratio", f"{analysis['sharpe']}")
-
-    # ── Cumulative return trend ──
-    st.markdown("#### \U0001f4c8 Cumulative Return Trend")
-    st.plotly_chart(trend_chart(df, theme), use_container_width=True,
-        config={"scrollZoom": True, "displayModeBar": True, "displaylogo": False})
 
     # ── Two-column: Indicators + Patterns ──
     col_left, col_right = st.columns(2)
@@ -1191,6 +1169,14 @@ else:
     st.markdown("---")
     with st.expander("\U0001f5fa\ufe0f TradingView Live Chart (real-time data, native zoom)"):
         render_tradingview(asset.get("tv", ticker), theme, height=600)
+
+    # ── Advanced custom Plotly chart (collapsible) ──
+    with st.expander("Advanced Custom Chart (indicators + trendlines)"):
+        st.plotly_chart(
+            candlestick_chart(df, analysis, True, True, True, theme),
+            use_container_width=True,
+            config={"scrollZoom": True, "displayModeBar": True, "displaylogo": False},
+        )
 
 # ── Footer ──
 st.markdown("---")
