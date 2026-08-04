@@ -21,6 +21,15 @@ st.set_page_config(
         "About": "📊 Quant Desk — Stock Analysis Dashboard\nBuilt with Streamlit + Plotly + yfinance\nFor educational purposes only — not financial advice.",
     },
 )
+# Hide Streamlit hamburger menu (3-dots) and GitHub links
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden !important;}
+header {visibility: hidden !important;}
+footer {visibility: hidden !important;}
+.stDeployButton {display: none !important;}
+</style>
+""", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────
 # ASSETS WATCHLIST
@@ -641,6 +650,41 @@ def render_tradingview(symbol, theme="dark", height=600):
     </div>
     """
     components.html(html, height=height)
+def render_tradingview_fullscreen(symbol, theme="dark"):
+    """Render TradingView chart in fullscreen overlay."""
+    tv_symbol = symbol if ":" in symbol else f"NSE:{symbol}"
+    html = f"""
+    <div id="tv-fs" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:99999;background:#131722;">
+      <div class="tradingview-widget-container" style="height:100vh;width:100vw;">
+        <div class="tradingview-widget-container__widget" style="height:100vh;width:100vw;"></div>
+        <script type="text/javascript" src="https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js" async>
+        {{
+          "autosize": true,
+          "symbol": "{tv_symbol}",
+          "interval": "D",
+          "timezone": "Asia/Kolkata",
+          "theme": "{theme}",
+          "style": "1",
+          "locale": "in",
+          "toolbar_bg": "#131722",
+          "enable_publishing": false,
+          "withdateranges": true,
+          "hide_side_toolbar": false,
+          "allow_symbol_change": true,
+          "studies": ["STD;SMA", "STD;RSI", "Volume@tv-basicstudies", "STD;MACD", "STD;Bollinger_Bands"],
+          "support_host": "https://www.tradingview.com"
+        }}
+        </script>
+      </div>
+      <button onclick="var e=document.getElementById('tv-fs');e.parentNode.removeChild(e);document.body.style.overflow='';" style="position:fixed;top:12px;right:12px;z-index:100000;background:#ef4444;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;cursor:pointer;font-weight:600;">✖ Close Fullscreen</button>
+    </div>
+    <script>document.body.style.overflow='hidden';</script>
+    """
+    components.html(html, height=1000)
+
+    if st.button("Exit Fullscreen", key="tv_fs_exit", type="secondary"):
+        st.session_state["tv_fullscreen"] = False
+        st.rerun()
 
 def render_tradingview_ticker(symbol, theme="dark"):
     tv_sym = symbol.replace(".NS", "") if ".NS" in symbol else symbol
@@ -668,7 +712,6 @@ def render_tradingview_ticker(symbol, theme="dark"):
     </div>
     """
     components.html(html, height=70)
-
 # ──────────────────────────────────────────────
 # VOICE NARRATION
 # ──────────────────────────────────────────────
@@ -948,7 +991,8 @@ else:
         df = fetch_ohlc(ticker, st.session_state.period, st.session_state.interval)
 
     if df is None or len(df) < 5:
-        st.error(f"\u274c Could not fetch data for {ticker}. Please try a different period or asset.")
+        with st.expander("\u26a0\ufe0f Error Details (click to expand)"):
+            st.error(f"Could not fetch data for {ticker}. Please try a different period or asset.")
         if st.button("\u2190 Back to Watchlist"):
             st.session_state.selected_asset = None
             st.rerun()
@@ -1090,9 +1134,18 @@ else:
         {analysis['verdict']} &nbsp;|&nbsp; Bullish: {analysis['bull_signals']} &nbsp;\u00b7&nbsp; Bearish: {analysis['bear_signals']}
     </div>
     """, unsafe_allow_html=True)
-    # ── Main chart - TradingView with native zoom ──
-    st.markdown("#### Live Chart (scroll to zoom, drag to pan)")
-    render_tradingview(asset.get("tv", ticker), theme, height=600)
+    # ── Main chart - Plotly candlestick (scroll to zoom like photo) ──
+    st.plotly_chart(
+        candlestick_chart(df, analysis, True, True, True, theme),
+        use_container_width=True,
+        config={
+            "scrollZoom": True,
+            "displayModeBar": True,
+            "displaylogo": False,
+            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
+            "modeBarButtonsToRemove": ["select2d", "lasso2d"],
+        },
+    )
     # ── Top metrics row ──
     col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
     with col_m1:
@@ -1168,19 +1221,17 @@ else:
         })
         st.dataframe(sig_df, use_container_width=True, hide_index=True)
 
-    # ── TradingView live chart (collapsible) ──
+    # ── TradingView chart with fullscreen (collapsible) ──
     st.markdown("---")
-    with st.expander("\U0001f5fa\ufe0f TradingView Live Chart (real-time data, native zoom)"):
-        render_tradingview(asset.get("tv", ticker), theme, height=600)
-
-    # ── Advanced custom Plotly chart (collapsible) ──
-    with st.expander("Advanced Custom Chart (indicators + trendlines)"):
-        st.plotly_chart(
-            candlestick_chart(df, analysis, True, True, True, theme),
-            use_container_width=True,
-            config={"scrollZoom": True, "displayModeBar": True, "displaylogo": False},
-        )
-
+    with st.expander("TradingView Live Chart (native zoom + fullscreen)"):
+        fs_col1, fs_col2 = st.columns([4, 1])
+        with fs_col2:
+            if st.button("U0001f5faufe0f Open Fullscreen", key="tv_fs", use_container_width=True):
+                st.session_state["tv_fullscreen"] = not st.session_state.get("tv_fullscreen", False)
+        if st.session_state.get("tv_fullscreen", False):
+            render_tradingview_fullscreen(asset.get("tv", ticker), theme)
+        else:
+            render_tradingview(asset.get("tv", ticker), theme, height=600)
 # ── Footer ──
 st.markdown("---")
 footer_col1, footer_col2 = st.columns([3, 1])
