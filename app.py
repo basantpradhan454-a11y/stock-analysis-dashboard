@@ -80,7 +80,7 @@ ASSETS = [
 ]
 
 # ── Navigation Tabs ──
-NAV_TABS = ["Dashboard", "Strategy Bot", "Backtester", "Quant Tools", "Portfolio", "Trading Bot"]
+NAV_TABS = ["Dashboard", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Portfolio", "Trading Bot"]
 active_tab = st.sidebar.selectbox("Navigate", NAV_TABS, key="nav_tab")
 
 if active_tab != "Dashboard":
@@ -93,6 +93,9 @@ if active_tab != "Dashboard":
         from modules.quant_tools import render_quant_tools
         render_quant_tools()
         render_backtester()
+    elif active_tab == "Quant Trade":
+        from modules.quant_trade import render_quant_trade
+        render_quant_trade()
     elif active_tab == "Portfolio":
         from modules.portfolio_tracker import render_portfolio_tracker
         render_portfolio_tracker()
