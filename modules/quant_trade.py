@@ -86,56 +86,56 @@ NAV_GROUPS = [
 # ═══════════════════════════════════════════════════════════════════════════
 # 1. STOCK SEARCH / SCREENER
 # ═══════════════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════
 def _render_screener():
     st.markdown("## \U0001f50d Stock Search")
-    st.caption("Type any stock name or symbol to see matches with logo and exchange.")
+    st.caption("Kisi bhi stock ko choose karne par chart khulega. Search ya direct select karo.")
 
     q = st.text_input("Search stocks", placeholder="e.g. Reliance, TCS, Apple, Bitcoin", key="qt_screener_input")
 
-    if not q.strip():
-        # Show all stocks as cards
-        cols = st.columns(3)
-        for i, s in enumerate(STOCK_DB):
-            with cols[i % 3]:
-                st.markdown(f"""
-                <div style='background:#1c2431;border:1px solid #2a3441;border-radius:10px;padding:12px;margin-bottom:8px;display:flex;align-items:center;gap:10px;'>
-                    <img src='{logo_url(s["logo"])}' onerror='this.style.display="none"' style='width:28px;height:28px;border-radius:6px;background:#fff;' />
-                    <div>
-                        <div style='font-weight:600;font-size:13px;color:#e6edf3;'>{s["name"]}</div>
-                        <div style='font-size:11px;color:#8b949e;'>{s["symbol"]} \u00b7 \u20b9/{s["price"]:,.0f}</div>
-                    </div>
-                    <span style='margin-left:auto;font-size:10px;padding:2px 8px;border-radius:10px;background:rgba(59,130,246,0.15);color:#60a5fa;'>{s["exchange"]}</span>
-                </div>""", unsafe_allow_html=True)
-        return
+    # Build the list to display
+    if q.strip():
+        matches = [s for s in STOCK_DB if q.lower() in s["name"].lower() or q.lower() in s["symbol"].lower()]
+    else:
+        matches = STOCK_DB
 
-    matches = [s for s in STOCK_DB if q.lower() in s["name"].lower() or q.lower() in s["symbol"].lower()]
     if not matches:
         st.info("No matches found.")
         return
 
-    for s in matches:
-        st.markdown(f"""
-        <div style='background:#1c2431;border:1px solid #2a3441;border-radius:8px;padding:10px;margin-bottom:6px;display:flex;align-items:center;gap:10px;max-width:480px;'>
-            <img src='{logo_url(s["logo"])}' onerror='this.style.display="none"' style='width:26px;height:26px;border-radius:6px;background:#fff;' />
-            <div>
-                <div style='font-weight:600;font-size:13.5px;color:#e6edf3;'>{s["name"]}</div>
-                <div style='font-size:11.5px;color:#8b949e;'>{s["symbol"]} \u00b7 \u20b9/$ {s["price"]:,.0f}</div>
-            </div>
-            <span style='margin-left:auto;font-size:11px;padding:2px 8px;border-radius:10px;background:rgba(59,130,246,0.15);color:#60a5fa;'>{s["exchange"]}</span>
-        </div>""", unsafe_allow_html=True)
+    st.markdown(f"**{len(matches)} stocks found** \u2014 click any to open chart")
 
-    # Button to load in TradingView
-    selected = st.selectbox("Load chart for:", [f"{s['name']} ({s['symbol']})" for s in matches], key="qt_screener_sel")
-    if st.button("\U0001f4c8 Open in TradingView", key="qt_screener_go"):
-        idx = [f"{s['name']} ({s['symbol']})" for s in matches].index(selected)
+    # Render as clickable cards using st.button
+    cols = st.columns(3)
+    for i, s in enumerate(matches):
+        with cols[i % 3]:
+            # Logo + exchange as HTML header
+            html = (
+                "<div style='display:flex;align-items:center;gap:8px;margin-bottom:-12px;'>"
+                f"<img src='{logo_url(s['logo'])}' "
+                "onerror='this.style.display=\"none\"' "
+                "style='width:24px;height:24px;border-radius:4px;background:#fff;' />"
+                f"<span style='font-size:12px;color:#8b949e;'>{s['exchange']}</span>"
+                "</div>"
+            )
+            st.markdown(html, unsafe_allow_html=True)
+            if st.button(s["name"], key=f"qt_stock_{s['logo']}", use_container_width=True,
+                         help=f"{s['symbol']} \u00b7 {s['exchange']}"):
+                st.session_state["qt_selected_stock"] = s
+                st.session_state["qt_subview"] = "chart"
+                st.rerun()
+
+    # Also show a selectbox as alternative
+    st.markdown("---")
+    options = [f"{s['name']} ({s['symbol']})" for s in matches]
+    sel = st.selectbox("Or select from dropdown:", options, key="qt_screener_sel")
+    if st.button("\U0001f4c8 Open Chart", key="qt_screener_go", type="primary"):
+        idx = options.index(sel)
         st.session_state["qt_selected_stock"] = matches[idx]
         st.session_state["qt_subview"] = "chart"
         st.rerun()
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# 2. TRADINGVIEW CHART
-# ═══════════════════════════════════════════════════════════════════════════
 def _render_chart():
     st.markdown("## \U0001f4c8 Live Candlestick Chart")
     st.caption("Full TradingView chart \u2014 indicators, drawing tools, timeframes, and symbol switch all included.")
@@ -746,6 +746,14 @@ def render_quant_trade():
         for item in group["items"]:
             all_items.append(item)
 
+    # If qt_subview was set (e.g. from screener click), sync the selectbox
+    if "qt_subview" in st.session_state:
+        override_id = st.session_state.pop("qt_subview")
+        for item in all_items:
+            if item["id"] == override_id:
+                st.session_state["qt_subview_select"] = item["label"]
+                break
+
     # Sidebar sub-nav with grouped labels
     sub_nav = st.sidebar.selectbox(
         "\U0001f50d Quant Trade View",
@@ -759,10 +767,6 @@ def render_quant_trade():
         if item["label"] == sub_nav:
             selected_id = item["id"]
             break
-
-    # Override if set by screener navigation
-    if "qt_subview" in st.session_state:
-        selected_id = st.session_state.pop("qt_subview")
 
     # Render the selected view
     renderer = RENDERERS.get(selected_id, _render_screener)
