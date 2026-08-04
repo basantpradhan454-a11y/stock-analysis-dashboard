@@ -21,12 +21,9 @@ st.set_page_config(
         "About": "📊 Quant Desk — Stock Analysis Dashboard\nBuilt with Streamlit + Plotly + yfinance\nFor educational purposes only — not financial advice.",
     },
 )
-# Hide Streamlit hamburger menu (3-dots) and GitHub links
+# Hide GitHub deploy button only (3-dots menu stays visible)
 st.markdown("""
 <style>
-#MainMenu {visibility: hidden !important;}
-header {visibility: hidden !important;}
-footer {visibility: hidden !important;}
 .stDeployButton {display: none !important;}
 </style>
 """, unsafe_allow_html=True)
