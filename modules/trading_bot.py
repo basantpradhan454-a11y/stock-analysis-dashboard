@@ -145,7 +145,7 @@ def render_trading_bot():
 
     for i, (key, broker) in enumerate(BROKERS.items()):
         with broker_cols[i]:
-            connected = _get_broker_status(key)
+            connected = _get_broker_status(key) or st.session_state.get(f"broker_connected_{key}", False)
             border_color = "#00ff88" if connected else broker["color"] + "44"
             bg = "rgba(0,255,136,0.05)" if connected else "rgba(74,158,255,0.03)"
             st.markdown(f"""
@@ -155,15 +155,39 @@ def render_trading_bot():
                 <div style='font-size:10px;color:{"#00ff88" if connected else "#8b949e"};margin-top:2px;'>
                 {"Connected" if connected else "Not connected"}</div>
             </div>""", unsafe_allow_html=True)
-            if st.button(f"{'Disconnect' if connected else 'Connect'}", key=f"broker_{key}", use_container_width=True):
-                if key == "Groww":
-                    st.info("Groww API integration coming soon! Add GROW_API_KEY to your Streamlit secrets to enable. Currently in sandbox mode.")
-                elif connected:
+            if not connected:
+                if st.button("Connect", key=f"broker_{key}", use_container_width=True):
+                    st.session_state[f"broker_show_input_{key}"] = True
+                    st.rerun()
+                # Show API key input form when Connect is clicked
+                if st.session_state.get(f"broker_show_input_{key}", False):
+                    api_key = st.text_input("API Key", type="password", key=f"api_key_{key}",
+                                            placeholder=f"Enter {broker['name']} API Key")
+                    api_secret = st.text_input("API Secret", type="password", key=f"api_secret_{key}",
+                                               placeholder=f"Enter {broker['name']} API Secret")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("Confirm", key=f"confirm_{key}", type="primary", use_container_width=True):
+                            if api_key.strip():
+                                st.session_state[f"broker_connected_{key}"] = True
+                                st.session_state[f"broker_api_key_{key}"] = api_key
+                                st.session_state["bot_config"]["broker"] = broker["name"]
+                                st.session_state[f"broker_show_input_{key}"] = False
+                                st.success(f"Connected to {broker['name']}! Bot is ready.")
+                                st.rerun()
+                            else:
+                                st.error("API Key required!")
+                    with c2:
+                        if st.button("Cancel", key=f"cancel_{key}", use_container_width=True):
+                            st.session_state[f"broker_show_input_{key}"] = False
+                            st.rerun()
+            else:
+                if st.button("Disconnect", key=f"broker_{key}", use_container_width=True):
+                    st.session_state[f"broker_connected_{key}"] = False
+                    st.session_state.pop(f"broker_api_key_{key}", None)
                     st.session_state["bot_config"]["broker"] = "Sandbox"
                     st.success(f"Disconnected from {broker['name']}. Switched to Sandbox.")
-                else:
-                    st.info(f"To connect {broker['name']}, add the API credentials to your Streamlit secrets (Settings > Secrets).")
-                st.rerun()
+                    st.rerun()
 
     current_broker = st.session_state["bot_config"]["broker"]
     st.markdown(f"**Active Broker:** {current_broker}")

@@ -25,6 +25,17 @@ st.set_page_config(
 st.markdown("""
 <style>
 .stDeployButton {display: none !important;}
+/* Fix Plotly chart zoom - prevent double-tap, enable smooth scroll/pinch */
+.js-plotly-plot .plot-container,
+.js-plotly-plot .svg-container {
+    touch-action: none !important;
+}
+.modebar-btn[data-val="zoomIn2d"], .modebar-btn[data-val="zoomOut2d"] {
+    display: none !important;
+}
+/* Better Plotly modebar styling */
+.modebar {background: transparent !important;}
+.modebar-btn.active {background-color: rgba(59,130,246,0.2) !important;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -776,7 +787,7 @@ def generate_audio(text):
 def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
     template = "plotly_dark" if theme == "dark" else "plotly_white"
     bg_color = "rgba(0,0,0,0)" if theme == "dark" else "rgba(255,255,255,0)"
-    grid_color = "rgba(50,50,50,0.3)" if theme == "dark" else "rgba(200,200,200,0.5)"
+    grid_color = "rgba(50,50,50,0.25)" if theme == "dark" else "rgba(200,200,200,0.4)"
 
     fig = make_subplots(
         rows=4, cols=1, shared_xaxes=True,
@@ -785,71 +796,87 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         subplot_titles=("Price & Indicators", "Volume", "RSI (14)", "MACD (12, 26, 9)"),
     )
 
+    # TradingView-style candlestick - thicker bodies, cleaner colors
     fig.add_trace(go.Candlestick(
         x=df["date"], open=df["open"], high=df["high"], low=df["low"], close=df["close"],
         name="OHLC",
-        increasing_line_color="#1d9e75", decreasing_line_color="#e0524f",
+        increasing_line_color="#26a69a", decreasing_line_color="#ef5350",
+        increasing_fillcolor="#26a69a", decreasing_fillcolor="#ef5350",
+        line_width=1.5,
+        whiskerwidth=0.5,
     ), row=1, col=1)
 
     if show_ma:
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["sma20"], name="SMA 20",
-                                 line=dict(color="#378add", width=1.5)), row=1, col=1)
+                                 line=dict(color="#2962ff", width=1.8)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["sma50"], name="SMA 50",
-                                 line=dict(color="#eda100", width=1.5)), row=1, col=1)
+                                 line=dict(color="#ff9800", width=1.8)), row=1, col=1)
 
     if show_bb:
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["bb_upper_series"], name="BB Upper",
-                                 line=dict(color="#7f77dd", width=1, dash="dot"), opacity=0.8), row=1, col=1)
+                                 line=dict(color="#9575cd", width=1.2, dash="dot"), opacity=0.7), row=1, col=1)
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["bb_lower_series"], name="BB Lower",
-                                 line=dict(color="#7f77dd", width=1, dash="dot"), opacity=0.8, showlegend=False), row=1, col=1)
+                                 line=dict(color="#9575cd", width=1.2, dash="dot"), opacity=0.7, showlegend=False), row=1, col=1)
 
     if show_trend and analysis.get("res_trend_vals") is not None:
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["res_trend_vals"], name="Resistance Trend",
-                                 line=dict(color="#e0524f", width=1.4, dash="dash"), opacity=0.85), row=1, col=1)
+                                 line=dict(color="#ef5350", width=2, dash="dash"), opacity=0.9), row=1, col=1)
     if show_trend and analysis.get("sup_trend_vals") is not None:
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["sup_trend_vals"], name="Support Trend",
-                                 line=dict(color="#1d9e75", width=1.4, dash="dash"), opacity=0.85), row=1, col=1)
+                                 line=dict(color="#26a69a", width=2, dash="dash"), opacity=0.9), row=1, col=1)
 
-    # Support / Resistance horizontal lines
-    fig.add_hline(y=analysis["resistance"], line_dash="solid", line_color="#e0524f",
-                  opacity=0.4, row=1, col=1)
-    fig.add_hline(y=analysis["support"], line_dash="solid", line_color="#1d9e75",
-                  opacity=0.4, row=1, col=1)
+    # Support / Resistance horizontal lines - BOLD and visible like TradingView
+    fig.add_hline(y=analysis["resistance"], line_dash="solid", line_color="#ef5350",
+                  line_width=2, opacity=0.8, row=1, col=1,
+                  annotation_text=f"R: {analysis['resistance']:.2f}",
+                  annotation_position="top right", annotation_font_size=10,
+                  annotation_font_color="#ef5350")
+    fig.add_hline(y=analysis["support"], line_dash="solid", line_color="#26a69a",
+                  line_width=2, opacity=0.8, row=1, col=1,
+                  annotation_text=f"S: {analysis['support']:.2f}",
+                  annotation_position="bottom right", annotation_font_size=10,
+                  annotation_font_color="#26a69a")
 
     if "volume" in df.columns:
-        colors = ["#5dcaa5" if c >= o else "#f0997b" for c, o in zip(df["close"], df["open"])]
+        colors = ["#26a69a" if c >= o else "#ef5350" for c, o in zip(df["close"], df["open"])]
         fig.add_trace(go.Bar(x=df["date"], y=df["volume"], name="Volume",
-                             marker_color=colors, opacity=0.85), row=2, col=1)
+                             marker_color=colors, opacity=0.6), row=2, col=1)
         if analysis.get("avg_vol"):
             fig.add_hline(y=analysis["avg_vol"], line_dash="dash", line_color="#7c7b76",
-                          opacity=0.7, row=2, col=1)
+                          opacity=0.5, row=2, col=1)
 
     fig.add_trace(go.Scatter(x=df["date"], y=analysis["rsi_vals"], name="RSI",
-                             line=dict(color="#a89ff0", width=1.6)), row=3, col=1)
-    fig.add_hline(y=70, line_dash="dot", line_color="#e0524f", opacity=0.6, row=3, col=1)
-    fig.add_hline(y=30, line_dash="dot", line_color="#1d9e75", opacity=0.6, row=3, col=1)
+                             line=dict(color="#ab47bc", width=1.8)), row=3, col=1)
+    fig.add_hline(y=70, line_dash="dot", line_color="#ef5350", line_width=1, opacity=0.5, row=3, col=1)
+    fig.add_hline(y=30, line_dash="dot", line_color="#26a69a", line_width=1, opacity=0.5, row=3, col=1)
 
-    hist_colors = ["#5dcaa5" if h >= 0 else "#f0997b" for h in analysis["hist"]]
+    hist_colors = ["#26a69a" if h >= 0 else "#ef5350" for h in analysis["hist"]]
     fig.add_trace(go.Bar(x=df["date"], y=analysis["hist"], name="MACD Hist",
-                         marker_color=hist_colors, opacity=0.85), row=4, col=1)
+                         marker_color=hist_colors, opacity=0.6), row=4, col=1)
     fig.add_trace(go.Scatter(x=df["date"], y=analysis["macd_line"], name="MACD",
-                             line=dict(color="#378add", width=1.4)), row=4, col=1)
+                             line=dict(color="#2962ff", width=1.6)), row=4, col=1)
     fig.add_trace(go.Scatter(x=df["date"], y=analysis["signal_line"], name="Signal",
-                             line=dict(color="#eda100", width=1.4)), row=4, col=1)
+                             line=dict(color="#ff9800", width=1.6)), row=4, col=1)
 
     fig.update_layout(
         template=template,
         height=780,
-        margin=dict(l=50, r=20, t=40, b=30),
+        margin=dict(l=50, r=60, t=40, b=30),
         xaxis_rangeslider_visible=False,
         showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        font=dict(size=11),
+        font=dict(size=11, family="Trebuchet MS, sans-serif"),
         paper_bgcolor=bg_color,
         plot_bgcolor=bg_color,
+        hovermode="x unified",
+        dragmode="zoom",
     )
-    fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor=grid_color)
+    # TradingView-like axis styling
+    fig.update_xaxes(showgrid=False, showline=True, linecolor=grid_color, mirror=True)
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor=grid_color, side="right",
+                     showline=True, linecolor=grid_color, mirror=True)
+    # Fix y-axis to show proper price formatting
+    fig.update_yaxes(tickformat=".2f", row=1, col=1)
     return fig
 
 def trend_chart(df, theme="dark"):
@@ -1171,8 +1198,9 @@ else:
             "scrollZoom": True,
             "displayModeBar": True,
             "displaylogo": False,
-            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "eraseshape"],
-            "modeBarButtonsToRemove": ["select2d", "lasso2d"],
+            "responsive": True,
+            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "eraseshape"],
+            "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
         },
     )
     # ── Top metrics row ──
