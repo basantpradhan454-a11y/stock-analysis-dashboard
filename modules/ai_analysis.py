@@ -1,6 +1,7 @@
 """FinSage AI - Advanced Analysis Module
-Chart photo upload, 30-day Monte Carlo, ML predictions, AI auto-strategy,
-Fibonacci levels, comprehensive technical + quant analysis.
+Chart photo upload, 30-day Monte Carlo, ML predictions (Logistic + Random Forest),
+AI auto-strategy, Fibonacci levels, Golden/Death Cross, Candlestick patterns,
+comprehensive technical + quant analysis with skewness/kurtosis.
 """
 
 import streamlit as st
@@ -93,6 +94,175 @@ def _var(returns, conf=0.95):
     return float(np.percentile(returns.dropna(), (1 - conf) * 100))
 
 
+# ── NEW: Golden/Death Cross detection ──
+def _golden_death_cross(sma50, sma200):
+    """Detect Golden Cross (SMA50 crosses above SMA200) and Death Cross (below)."""
+    signals = pd.Series(0, index=sma50.index)
+    golden = (sma50 > sma200) & (sma50.shift(1) <= sma200.shift(1))
+    death = (sma50 < sma200) & (sma50.shift(1) >= sma200.shift(1))
+    signals[golden] = 1
+    signals[death] = -1
+    # Find recent crosses
+    golden_dates = sma50.index[golden.fillna(False)]
+    death_dates = sma50.index[death.fillna(False)]
+    return signals, list(golden_dates[-3:]), list(death_dates[-3:])
+
+
+# ── NEW: Candlestick pattern detection ──
+def _detect_candlestick_patterns(df):
+    """Detect Doji, Hammer, Shooting Star, Bullish/Bearish Engulfing patterns."""
+    o, h, l, c = df["open"], df["high"], df["low"], df["close"]
+    body = (c - o).abs()
+    range_ = h - l
+    upper_wick = h - pd.concat([o, c], axis=1).max(axis=1)
+    lower_wick = pd.concat([o, c], axis=1).min(axis=1) - l
+
+    patterns = pd.Series("", index=df.index)
+
+    # Doji: very small body relative to range
+    is_doji = body <= 0.1 * range_
+    patterns[is_doji] += "Doji;"
+
+    # Hammer: small body, long lower wick, little/no upper wick
+    is_hammer = (lower_wick >= 2 * body) & (upper_wick <= 0.3 * body) & (body > 0)
+    patterns[is_hammer] += "Hammer;"
+
+    # Shooting Star: small body, long upper wick, little/no lower wick
+    is_shooting_star = (upper_wick >= 2 * body) & (lower_wick <= 0.3 * body) & (body > 0)
+    patterns[is_shooting_star] += "Shooting Star;"
+
+    # Bullish Engulfing
+    prev_open, prev_close = o.shift(1), c.shift(1)
+    bullish_engulf = (
+        (prev_close < prev_open) & (c > o) & (o <= prev_close) & (c >= prev_open)
+    )
+    patterns[bullish_engulf] += "Bullish Engulfing;"
+
+    # Bearish Engulfing
+    bearish_engulf = (
+        (prev_close > prev_open) & (c < o) & (o >= prev_close) & (c <= prev_open)
+    )
+    patterns[bearish_engulf] += "Bearish Engulfing;"
+
+    return patterns
+
+
+# ── NEW: Returns statistics with skewness and kurtosis ──
+def _returns_stats(returns):
+    """Compute comprehensive return statistics including skewness and kurtosis."""
+    mean_r = float(returns.mean())
+    std_r = float(returns.std())
+    # Skewness: measure of asymmetry
+    n = len(returns)
+    skew = float(n / ((n-1)*(n-2)) * np.sum(((returns - mean_r) / std_r) ** 3)) if std_r > 0 and n > 2 else 0
+    # Kurtosis (excess): measure of tail thickness
+    kurt = float(n*(n+1) / ((n-1)*(n-2)*(n-3)) * np.sum(((returns - mean_r) / std_r) ** 4) - 3*(n-1)**2/((n-2)*(n-3))) if std_r > 0 and n > 3 else 0
+    return {
+        "Mean Daily Return": mean_r,
+        "Std Dev (Volatility)": std_r,
+        "Annualized Volatility": std_r * np.sqrt(252),
+        "Skewness": skew,
+        "Kurtosis": kurt,
+        "Annualized Return": (1 + mean_r) ** 252 - 1,
+    }
+
+
+# ── NEW: Simple Random Forest (pure numpy decision trees) ──
+def _gini(y):
+    if len(y) == 0: return 0
+    probs = np.bincount(y, minlength=2) / len(y)
+    return 1 - np.sum(probs ** 2)
+
+def _best_split(X, y, feature_indices, n_candidates=10):
+    """Find the best split for a decision tree node."""
+    best_gini = _gini(y)
+    best_feat, best_thresh = None, None
+    n = len(y)
+    for feat in feature_indices:
+        col = X[:, feat]
+        if n > n_candidates:
+            thresholds = np.linspace(col.min(), col.max(), n_candidates + 1)[1:-1]
+        else:
+            thresholds = np.unique(col)[:-1]
+        for thresh in thresholds:
+            left = y[col <= thresh]
+            right = y[col > thresh]
+            if len(left) == 0 or len(right) == 0:
+                continue
+            g = (len(left) * _gini(left) + len(right) * _gini(right)) / n
+            if g < best_gini:
+                best_gini = g
+                best_feat = feat
+                best_thresh = thresh
+    return best_feat, best_thresh
+
+def _build_tree(X, y, feature_indices, depth=0, max_depth=5, min_samples=5):
+    """Build a single decision tree."""
+    if depth >= max_depth or len(y) < min_samples or len(np.unique(y)) == 1:
+        probs = np.bincount(y, minlength=2) / len(y) if len(y) > 0 else np.array([0.5, 0.5])
+        return {"leaf": True, "probs": probs}
+    feat, thresh = _best_split(X, y, feature_indices)
+    if feat is None:
+        probs = np.bincount(y, minlength=2) / len(y) if len(y) > 0 else np.array([0.5, 0.5])
+        return {"leaf": True, "probs": probs}
+    left_mask = X[:, feat] <= thresh
+    return {
+        "leaf": False, "feat": feat, "thresh": thresh,
+        "left": _build_tree(X[left_mask], y[left_mask], feature_indices, depth+1, max_depth, min_samples),
+        "right": _build_tree(X[~left_mask], y[~left_mask], feature_indices, depth+1, max_depth, min_samples),
+    }
+
+def _predict_tree(tree, X):
+    if tree["leaf"]:
+        return tree["probs"]
+    pred = np.zeros((len(X), 2))
+    left_mask = X[:, tree["feat"]] <= tree["thresh"]
+    pred[left_mask] = _predict_tree(tree["left"], X[left_mask])
+    pred[~left_mask] = _predict_tree(tree["right"], X[~left_mask])
+    return pred
+
+def _train_random_forest(X, y, n_trees=50, max_depth=5, n_features=None, seed=42):
+    """Simple Random Forest using pure numpy decision trees."""
+    rng = np.random.default_rng(seed)
+    n, d = X.shape
+    if n_features is None:
+        n_features = max(1, int(np.sqrt(d)))
+    trees = []
+    for t in range(n_trees):
+        # Bootstrap sample
+        idx = rng.integers(0, n, size=n)
+        X_boot, y_boot = X[idx], y[idx]
+        # Random feature subset
+        feat_idx = rng.choice(d, size=min(n_features, d), replace=False)
+        tree = _build_tree(X_boot, y_boot, feat_idx, max_depth=max_depth)
+        trees.append(tree)
+    return trees
+
+def _predict_random_forest(trees, X):
+    preds = np.zeros((len(X), 2))
+    for tree in trees:
+        preds += _predict_tree(tree, X)
+    return preds / len(trees)
+
+def _random_forest_importance(trees, n_features):
+    """Compute feature importance from the random forest."""
+    importance = np.zeros(n_features)
+    for tree in trees:
+        if not tree["leaf"]:
+            importance[tree["feat"]] += 1
+            _collect_importance(tree, importance)
+    total = importance.sum()
+    return importance / total if total > 0 else importance
+
+def _collect_importance(node, importance):
+    """Recursively collect feature usage count."""
+    if node["leaf"]:
+        return
+    importance[node["feat"]] += 1
+    _collect_importance(node["left"], importance)
+    _collect_importance(node["right"], importance)
+
+
 @st.cache_data(ttl=300, show_spinner=False)
 def _fetch_data(sym, period="1y"):
     df = yf.Ticker(sym).history(period=period, interval="1d")
@@ -107,7 +277,7 @@ def _fetch_data(sym, period="1y"):
 
 # ═══ 1. PHOTO UPLOAD → REAL CHART ═══
 def _render_photo_upload():
-    st.markdown("### \U0001f4f8 Chart Photo → Real Chart")
+    st.markdown("### \U0001f4f8 Chart Photo \u2192 Real Chart")
     st.caption("Upload any chart screenshot. Enter the symbol shown on it to load real data with full analysis.")
     uploaded = st.file_uploader("Upload chart screenshot/photo", type=["png", "jpg", "jpeg", "webp"], key="chart_photo_upload")
     if uploaded:
@@ -136,7 +306,7 @@ def _render_photo_upload():
             else:
                 st.info("Upload a chart photo and enter the symbol to see real-time analysis here.")
     else:
-        st.info("📷 Upload a chart screenshot to get started. Enter the symbol shown on it to load the real chart with full analysis.")
+        st.info("\U0001f4f7 Upload a chart screenshot to get started. Enter the symbol shown on it to load the real chart with full analysis.")
 
 
 # ═══ 2. FULL TECHNICAL + QUANT ANALYSIS ═══
@@ -148,6 +318,10 @@ def _render_full_analysis(df, sym=""):
     bb_u, bb_m, bb_l = _bb(close); atr_val = _atr(high, low, close)
     obv = _obv(close, vol); fib = _fibonacci_levels(df)
     sup_levels, res_levels = _find_support_resistance(df)
+    # NEW: Golden/Death Cross + Candlestick patterns
+    cross_signals, golden_dates, death_dates = _golden_death_cross(sma50, sma200)
+    candle_patterns = _detect_candlestick_patterns(df)
+
     last = df.iloc[-1]; last_close = float(last["close"])
     last_rsi = float(rsi.iloc[-1]) if not pd.isna(rsi.iloc[-1]) else 50
     last_macd = float(macd.iloc[-1]) if not pd.isna(macd.iloc[-1]) else 0
@@ -156,14 +330,29 @@ def _render_full_analysis(df, sym=""):
     last_sma50 = float(sma50.iloc[-1]) if not pd.isna(sma50.iloc[-1]) else last_close
     last_sma200 = float(sma200.iloc[-1]) if not pd.isna(sma200.iloc[-1]) else last_close
 
-    m1, m2, m3, m4, m5 = st.columns(5)
+    # Cross status
+    cross_status = "Golden Cross \u2764\ufe0f" if last_sma50 > last_sma200 else "Death Cross \u26b0\ufe0f" if last_sma50 < last_sma200 else "No Cross"
+
+    m1, m2, m3, m4, m5, m6 = st.columns(6)
     m1.metric("Price", f"\u20b9{last_close:.2f}")
     m2.metric("RSI", f"{last_rsi:.1f}", "Overbought" if last_rsi > 70 else "Oversold" if last_rsi < 30 else "Neutral")
     m3.metric("MACD", f"{last_macd:.2f}", "Bullish" if last_macd > last_sig else "Bearish")
     m4.metric("ATR", f"{last_atr:.2f}")
     m5.metric("Trend", "Up" if last_close > last_sma50 > last_sma200 else "Down" if last_close < last_sma50 < last_sma200 else "Mixed")
+    m6.metric("Cross", cross_status, "Bullish" if last_sma50 > last_sma200 else "Bearish")
 
-    st.markdown(f"#### \U0001f4ca {sym} — Technical Analysis Chart")
+    # NEW: Golden/Death Cross recent signals
+    if golden_dates or death_dates:
+        st.markdown("**\u2747\ufe0f Recent Golden/Death Cross Signals:**")
+        cross_msgs = []
+        for d in golden_dates:
+            cross_msgs.append(f"\U0001f7e2 Golden Cross on {d.strftime('%Y-%m-%d')} \u2014 SMA50 crossed above SMA200 (Bullish)")
+        for d in death_dates:
+            cross_msgs.append(f"\U0001f534 Death Cross on {d.strftime('%Y-%m-%d')} \u2014 SMA50 crossed below SMA200 (Bearish)")
+        for msg in cross_msgs:
+            st.markdown(f"- {msg}")
+
+    st.markdown(f"#### \U0001f4ca {sym} \u2014 Technical Analysis Chart")
     fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.05,
         row_heights=[0.6, 0.2, 0.2],
         subplot_titles=("Price + SMA + BB + Fibonacci", "Volume + OBV", "RSI + MACD"))
@@ -209,15 +398,46 @@ def _render_full_analysis(df, sym=""):
         "scrollZoom": True, "displayModeBar": True, "displaylogo": False, "responsive": True,
         "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
+    # ── NEW: Candlestick Pattern Detection ──
+    st.markdown("#### \U0001f50d Candlestick Patterns (last 10 days)")
+    recent_patterns = candle_patterns.tail(10)
+    detected = recent_patterns[recent_patterns != ""]
+    if len(detected) > 0:
+        pattern_meanings = {
+            "Doji": "\U0001f7e1 Doji \u2014 indecision, possible reversal",
+            "Hammer": "\U0001f7e2 Hammer \u2014 bullish reversal signal",
+            "Shooting Star": "\U0001f534 Shooting Star \u2014 bearish reversal signal",
+            "Bullish Engulfing": "\U0001f7e2 Bullish Engulfing \u2014 buyers overwhelming sellers",
+            "Bearish Engulfing": "\U0001f534 Bearish Engulfing \u2014 sellers overwhelming sellers",
+        }
+        for date, pats in detected.items():
+            for pat in pats.rstrip(";").split(";"):
+                pat = pat.strip()
+                if pat in pattern_meanings:
+                    st.markdown(f"- **{date.strftime('%Y-%m-%d')}**: {pattern_meanings[pat]}")
+                elif pat:
+                    st.markdown(f"- **{date.strftime('%Y-%m-%d')}**: {pat}")
+    else:
+        st.markdown("- \u27a1\ufe0f No strong candlestick pattern detected in last 10 days \u2014 trend continuation likely")
+
+    # ── Quant Analysis with Skewness/Kurtosis ──
     st.markdown("#### \U0001f4c8 Quant Analysis")
     returns = close.pct_change().dropna()
+    stats = _returns_stats(returns)
     q1, q2, q3, q4, q5, q6 = st.columns(6)
     q1.metric("Sharpe Ratio", f"{_sharpe_ratio(returns):.2f}")
     q2.metric("Sortino Ratio", f"{_sortino_ratio(returns):.2f}")
     q3.metric("Max Drawdown", f"{_max_drawdown(close)*100:.2f}%")
     q4.metric("VaR (95%)", f"{_var(returns)*100:.2f}%")
-    q5.metric("Ann. Volatility", f"{returns.std()*np.sqrt(252)*100:.1f}%")
-    q6.metric("Ann. Return", f"{((1+returns.mean())**252-1)*100:.1f}%")
+    q5.metric("Ann. Volatility", f"{stats['Annualized Volatility']*100:.1f}%")
+    q6.metric("Ann. Return", f"{stats['Annualized Return']*100:.1f}%")
+
+    # NEW: Skewness & Kurtosis
+    q7, q8, q9, q10 = st.columns(4)
+    q7.metric("Mean Daily Return", f"{stats['Mean Daily Return']*100:.3f}%")
+    q8.metric("Std Dev (Daily)", f"{stats['Std Dev (Volatility)']*100:.3f}%")
+    q9.metric("Skewness", f"{stats['Skewness']:.3f}", "Right-skewed" if stats['Skewness'] > 0.5 else "Left-skewed" if stats['Skewness'] < -0.5 else "Symmetric")
+    q10.metric("Kurtosis (excess)", f"{stats['Kurtosis']:.3f}", "Fat tails" if stats['Kurtosis'] > 3 else "Thin tails" if stats['Kurtosis'] < 0 else "Normal")
 
     st.markdown("#### \U0001f539 Fibonacci Retracement Levels (last 100 days)")
     fib_cols = st.columns(6)
@@ -277,10 +497,10 @@ def _render_monte_carlo(df, sym=""):
     st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False, "modeBarButtonsToRemove": ["select2d", "lasso2d"]})
 
 
-# ═══ 4. ML PREDICTION (Pure numpy) ═══
+# ═══ 4. ML PREDICTION (Logistic Regression + Random Forest) ═══
 def _render_ml_prediction(df, sym=""):
-    st.markdown("#### \U0001f916 ML Prediction — Next Day Direction")
-    st.caption("Logistic Regression trained on technical indicators to predict if price goes UP or DOWN tomorrow.")
+    st.markdown("#### \U0001f916 ML Prediction \u2014 Next Day Direction")
+    st.caption("Logistic Regression + Random Forest ensemble trained on technical indicators to predict if price goes UP or DOWN tomorrow.")
     close = df["close"]; high = df["high"]; low = df["low"]
     vol = df.get("volume", pd.Series(0, index=df.index))
     rsi = _rsi(close); macd, macd_sig = _macd(close); macd_hist = macd - macd_sig
@@ -298,9 +518,11 @@ def _render_ml_prediction(df, sym=""):
     if len(data) < 100:
         st.warning("Not enough data for ML prediction."); return
     split = int(len(data) * 0.8)
-    X_train = data.iloc[:split].drop(columns=["target"]).values; y_train = data.iloc[:split]["target"].values
-    X_test = data.iloc[split:].drop(columns=["target"]).values; y_test = data.iloc[split:]["target"].values
+    X_train = data.iloc[:split].drop(columns=["target"]).values; y_train = data.iloc[:split]["target"].values.astype(int)
+    X_test = data.iloc[split:].drop(columns=["target"]).values; y_test = data.iloc[split:]["target"].values.astype(int)
+    feature_names = list(features.columns)
 
+    # ── Model 1: Logistic Regression (pure numpy) ──
     def sigmoid(z):
         z = np.clip(z, -500, 500); return 1 / (1 + np.exp(-z))
     n, d = X_train.shape; mu_f = X_train.mean(axis=0); std_f = X_train.std(axis=0) + 1e-8
@@ -308,33 +530,75 @@ def _render_ml_prediction(df, sym=""):
     for _ in range(1000):
         pred = sigmoid(Xn @ w); grad = Xn.T @ (pred - y_train) / n; w -= 0.01 * grad
     def predict_logreg(X):
-        Xn = (X - mu_f) / (std_f + 1e-8); Xn = np.c_[np.ones(len(Xn)), Xn]; return sigmoid(Xn @ w)
-    train_acc = ((predict_logreg(X_train) >= 0.5).astype(int) == y_train).mean() * 100
-    test_acc = ((predict_logreg(X_test) >= 0.5).astype(int) == y_test).mean() * 100
+        Xn2 = (X - mu_f) / (std_f + 1e-8); Xn2 = np.c_[np.ones(len(Xn2)), Xn2]; return sigmoid(Xn2 @ w)
+    lr_train_acc = ((predict_logreg(X_train) >= 0.5).astype(int) == y_train).mean() * 100
+    lr_test_acc = ((predict_logreg(X_test) >= 0.5).astype(int) == y_test).mean() * 100
+    lr_importance = np.abs(w[1:])
+    lr_importance = lr_importance / lr_importance.sum() if lr_importance.sum() > 0 else lr_importance
+
+    # ── Model 2: Random Forest (pure numpy) ──
+    with st.spinner("Training Random Forest (50 trees)..."):
+        rf_trees = _train_random_forest(X_train, y_train, n_trees=50, max_depth=5, seed=42)
+    rf_train_preds = _predict_random_forest(rf_trees, X_train)
+    rf_test_preds = _predict_random_forest(rf_trees, X_test)
+    rf_train_acc = ((rf_train_preds[:, 1] >= 0.5).astype(int) == y_train).mean() * 100
+    rf_test_acc = ((rf_test_preds[:, 1] >= 0.5).astype(int) == y_test).mean() * 100
+    rf_importance = _random_forest_importance(rf_trees, d)
+
+    # ── Ensemble: average of both models ──
     latest_features = features.iloc[-1:].replace([np.inf, -np.inf], np.nan).dropna()
     if len(latest_features) > 0:
-        prob_up = float(predict_logreg(latest_features.values)[0]); prob_down = 1 - prob_up
+        lr_prob = float(predict_logreg(latest_features.values)[0])
+        rf_prob = float(_predict_random_forest(rf_trees, latest_features.values)[0, 1])
+        # Ensemble: weighted average (RF gets more weight)
+        prob_up = 0.35 * lr_prob + 0.65 * rf_prob
+        prob_down = 1 - prob_up
         pred_direction = "UP \u2b06\ufe0f" if prob_up >= 0.5 else "DOWN \u2b07\ufe0f"
         confidence = max(prob_up, prob_down) * 100
     else:
         prob_up = prob_down = 0.5; pred_direction = "NEUTRAL"; confidence = 50
+
+    # ── Display: Ensemble results ──
     ml1, ml2, ml3, ml4 = st.columns(4)
-    ml1.metric("Prediction", pred_direction); ml2.metric("Confidence", f"{confidence:.1f}%")
-    ml3.metric("Train Accuracy", f"{train_acc:.1f}%"); ml4.metric("Test Accuracy", f"{test_acc:.1f}%")
+    ml1.metric("Prediction (Ensemble)", pred_direction)
+    ml2.metric("Confidence", f"{confidence:.1f}%")
+    ml3.metric("LR Test Accuracy", f"{lr_test_acc:.1f}%")
+    ml4.metric("RF Test Accuracy", f"{rf_test_acc:.1f}%")
+
+    # ── Model comparison ──
+    st.markdown("**\U0001f4ca Model Comparison:**")
+    comp1, comp2, comp3, comp4 = st.columns(4)
+    comp1.metric("LR Train Acc", f"{lr_train_acc:.1f}%")
+    comp2.metric("LR Test Acc", f"{lr_test_acc:.1f}%")
+    comp3.metric("RF Train Acc", f"{rf_train_acc:.1f}%")
+    comp4.metric("RF Test Acc", f"{rf_test_acc:.1f}%")
+
+    # ── Probability bars ──
     prob_col1, prob_col2 = st.columns(2)
     with prob_col1:
-        st.markdown(f"<div style='background:#1a2e1a;border:1px solid #26a69a;border-radius:10px;padding:14px;text-align:center;margin:4px;'><div style='color:#26a69a;font-size:12px;'>Probability UP</div><div style='color:#26a69a;font-size:1.8rem;font-weight:bold;'>{prob_up*100:.1f}%</div><div style='background:#0d1117;border-radius:6px;height:10px;margin-top:8px;overflow:hidden;'><div style='background:#26a69a;height:100%;width:{prob_up*100:.1f}%;border-radius:6px;'></div></div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#1a2e1a;border:1px solid #26a69a;border-radius:10px;padding:14px;text-align:center;margin:4px;'><div style='color:#26a69a;font-size:12px;'>Probability UP (Ensemble)</div><div style='color:#26a69a;font-size:1.8rem;font-weight:bold;'>{prob_up*100:.1f}%</div><div style='background:#0d1117;border-radius:6px;height:10px;margin-top:8px;overflow:hidden;'><div style='background:#26a69a;height:100%;width:{prob_up*100:.1f}%;border-radius:6px;'></div></div></div>", unsafe_allow_html=True)
     with prob_col2:
-        st.markdown(f"<div style='background:#2e1a1a;border:1px solid #ef5350;border-radius:10px;padding:14px;text-align:center;margin:4px;'><div style='color:#ef5350;font-size:12px;'>Probability DOWN</div><div style='color:#ef5350;font-size:1.8rem;font-weight:bold;'>{prob_down*100:.1f}%</div><div style='background:#0d1117;border-radius:6px;height:10px;margin-top:8px;overflow:hidden;'><div style='background:#ef5350;height:100%;width:{prob_down*100:.1f}%;border-radius:6px;'></div></div></div>", unsafe_allow_html=True)
-    feature_names = list(features.columns); importance = np.abs(w[1:])
-    importance = importance / importance.sum() if importance.sum() > 0 else importance
-    fig_imp = go.Figure(go.Bar(x=importance, y=feature_names, orientation="h",
-        marker_color=["#2962ff" if imp > 0 else "#ef5350" for imp in importance],
-        text=[f"{imp*100:.1f}%" for imp in importance], textposition="outside"))
-    fig_imp.update_layout(template="plotly_dark", height=250, margin=dict(l=0, r=50, t=10, b=10),
-        xaxis_title="Importance", yaxis_title="", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", showlegend=False)
+        st.markdown(f"<div style='background:#2e1a1a;border:1px solid #ef5350;border-radius:10px;padding:14px;text-align:center;margin:4px;'><div style='color:#ef5350;font-size:12px;'>Probability DOWN (Ensemble)</div><div style='color:#ef5350;font-size:1.8rem;font-weight:bold;'>{prob_down*100:.1f}%</div><div style='background:#0d1117;border-radius:6px;height:10px;margin-top:8px;overflow:hidden;'><div style='background:#ef5350;height:100%;width:{prob_down*100:.1f}%;border-radius:6px;'></div></div></div>", unsafe_allow_html=True)
+
+    # ── Feature importance comparison (LR vs RF) ──
+    st.markdown("**\U0001f4ca Feature Importance (LR vs Random Forest):**")
+    fig_imp = go.Figure()
+    fig_imp.add_trace(go.Bar(x=lr_importance, y=feature_names, orientation="h", name="Logistic Regression",
+        marker_color="#2962ff", opacity=0.7, xaxis="x", yaxis="y"))
+    fig_imp.add_trace(go.Bar(x=rf_importance, y=feature_names, orientation="h", name="Random Forest",
+        marker_color="#ff9800", opacity=0.7, xaxis="x2", yaxis="y2"))
+    fig_imp.update_layout(
+        template="plotly_dark", height=300, margin=dict(l=0, r=0, t=20, b=20),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        showlegend=True, legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        barmode="group",
+        xaxis=dict(title="LR Importance", domain=[0, 0.45]),
+        xaxis2=dict(title="RF Importance", domain=[0.55, 1]),
+        yaxis2=dict(overlaying="y", side="right"),
+    )
     st.plotly_chart(fig_imp, use_container_width=True, config={"displaylogo": False})
-    st.caption("⚠️ ML predictions are based on historical patterns. NOT financial advice. Use for education only.")
+
+    st.caption("\u26a0\ufe0f ML predictions are based on historical patterns. NOT financial advice. Use for education only.")
 
 
 # ═══ 5. AI AUTO-STRATEGY ═══
@@ -343,10 +607,10 @@ def _render_ai_strategy(df, rsi, macd, macd_sig, sup_levels, res_levels, last_rs
     st.caption("AI analyzes current market conditions and generates a trading strategy automatically.")
     conditions = []; entry_rules = []; exit_rules = []
     if last_rsi < 30:
-        conditions.append(f"RSI is oversold ({last_rsi:.1f}) — potential bounce")
+        conditions.append(f"RSI is oversold ({last_rsi:.1f}) \u2014 potential bounce")
         entry_rules.append({"desc": "RSI below 35 (oversold zone)"}); exit_rules.append({"desc": "RSI above 65 (overbought)"})
     elif last_rsi > 70:
-        conditions.append(f"RSI is overbought ({last_rsi:.1f}) — potential reversal")
+        conditions.append(f"RSI is overbought ({last_rsi:.1f}) \u2014 potential reversal")
         entry_rules.append({"desc": "RSI above 70 (short setup)"}); exit_rules.append({"desc": "RSI back to 50"})
     else:
         conditions.append(f"RSI is neutral ({last_rsi:.1f})")
@@ -355,13 +619,13 @@ def _render_ai_strategy(df, rsi, macd, macd_sig, sup_levels, res_levels, last_rs
     elif last_close < last_sma50 < last_sma200:
         conditions.append("Strong downtrend: Price < SMA50 < SMA200"); entry_rules.append({"desc": "Price below SMA50 (downtrend)"})
     else:
-        conditions.append("Mixed trend — SMA50 and SMA200 are diverging")
+        conditions.append("Mixed trend \u2014 SMA50 and SMA200 are diverging")
     last_macd = float(macd.iloc[-1]) if not pd.isna(macd.iloc[-1]) else 0
     last_sig = float(macd_sig.iloc[-1]) if not pd.isna(macd_sig.iloc[-1]) else 0
     if last_macd > last_sig:
-        conditions.append("MACD above signal line — bullish momentum"); entry_rules.append({"desc": "MACD bullish crossover"})
+        conditions.append("MACD above signal line \u2014 bullish momentum"); entry_rules.append({"desc": "MACD bullish crossover"})
     else:
-        conditions.append("MACD below signal line — bearish momentum"); entry_rules.append({"desc": "MACD bearish crossover"})
+        conditions.append("MACD below signal line \u2014 bearish momentum"); entry_rules.append({"desc": "MACD bearish crossover"})
     nearest_sup = min(sup_levels, key=lambda x: abs(x - last_close)) if sup_levels else last_close * 0.95
     nearest_res = min(res_levels, key=lambda x: abs(x - last_close)) if res_levels else last_close * 1.05
     sl_pct = 3.0; tp_pct = 6.0
@@ -459,8 +723,8 @@ def _run_ai_strategy_backtest(df, sym, strategy_name, risk_rules):
 
 # ═══ MAIN RENDER ═══
 def render_ai_analysis():
-    st.markdown("""<div style="background:linear-gradient(135deg,rgba(2,6,9,0.97),rgba(0,5,20,0.95));border:1px solid rgba(74,158,255,0.25);border-radius:14px;padding:1.2rem 1.5rem;margin-bottom:1rem;"><div style="display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;"><div><div style="font-size:1.1rem;font-weight:800;font-family:Orbitron,monospace;background:linear-gradient(90deg,#4a9eff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">\U0001f9e0 AI Analysis Engine</div><div style="color:#8b949e;font-size:11px;margin-top:2px;">Photo-to-Chart · Monte Carlo 30D · ML Prediction · AI Strategy · Full Quant Analysis</div></div></div></div>""", unsafe_allow_html=True)
-    sub_tabs = st.tabs(["\U0001f4f8 Photo → Chart", "\U0001f4ca Full Analysis", "\U0001f3b2 Monte Carlo 30D", "\U0001f916 ML Prediction"])
+    st.markdown("""<div style="background:linear-gradient(135deg,rgba(2,6,9,0.97),rgba(0,5,20,0.95));border:1px solid rgba(74,158,255,0.25);border-radius:14px;padding:1.2rem 1.5rem;margin-bottom:1rem;"><div style="display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;"><div><div style="font-size:1.1rem;font-weight:800;font-family:Orbitron,monospace;background:linear-gradient(90deg,#4a9eff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">\U0001f9e0 AI Analysis Engine</div><div style="color:#8b949e;font-size:11px;margin-top:2px;">Photo-to-Chart \u00b7 Monte Carlo 30D \u00b7 ML (LR+RF) \u00b7 AI Strategy \u00b7 Golden/Death Cross \u00b7 Candlestick Patterns \u00b7 Full Quant Analysis</div></div></div></div>""", unsafe_allow_html=True)
+    sub_tabs = st.tabs(["\U0001f4f8 Photo \u2192 Chart", "\U0001f4ca Full Analysis", "\U0001f3b2 Monte Carlo 30D", "\U0001f916 ML Prediction"])
     with sub_tabs[0]: _render_photo_upload()
     with sub_tabs[1]:
         sym = st.text_input("Symbol", value="RELIANCE.NS", placeholder="AAPL, RELIANCE.NS, BTC-USD...", key="ai_analysis_sym")
@@ -477,7 +741,7 @@ def render_ai_analysis():
             else:
                 st.error(f"Could not fetch data for {data_params['sym']}")
         else:
-            st.info("👆 Enter a symbol and click 'Run Full Analysis' to see comprehensive technical + quant + ML analysis.")
+            st.info("Enter a symbol and click 'Run Full Analysis' to see comprehensive technical + quant + ML analysis.")
     with sub_tabs[2]:
         mc_sym = st.text_input("Symbol", value="RELIANCE.NS", key="mc_sym_input")
         mc_period = st.selectbox("Historical Data Period", ["3mo", "6mo", "1y", "2y", "5y"], index=2, key="mc_period_select")
@@ -489,7 +753,7 @@ def render_ai_analysis():
             if df is not None and len(df) > 20: _render_monte_carlo(df, mc_data["sym"])
             else: st.error(f"Could not fetch data for {mc_data['sym']}")
         else:
-            st.info("👆 Enter a symbol and click 'Run Monte Carlo' to simulate 30-day future price paths.")
+            st.info("Enter a symbol and click 'Run Monte Carlo' to simulate 30-day future price paths.")
     with sub_tabs[3]:
         ml_sym = st.text_input("Symbol", value="RELIANCE.NS", key="ml_sym_input")
         ml_period = st.selectbox("Training Data Period", ["6mo", "1y", "2y", "5y"], index=1, key="ml_period_select")
@@ -501,4 +765,4 @@ def render_ai_analysis():
             if df is not None and len(df) > 50: _render_ml_prediction(df, ml_data["sym"])
             else: st.error(f"Could not fetch data for {ml_data['sym']}")
         else:
-            st.info("👆 Enter a symbol and click 'Train & Predict' to get ML-based next-day direction prediction.")
+            st.info("Enter a symbol and click 'Train & Predict' to get ML-based next-day direction prediction.")

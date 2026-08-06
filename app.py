@@ -329,6 +329,7 @@ def build_analysis(df):
 
     sma20_vals = sma(closes, 20)
     sma50_vals = sma(closes, 50)
+    sma200_vals = sma(closes, 200)
     rsi_vals = rsi(closes)
     macd_line, signal_line, hist = macd(closes)
     bb_upper, bb_mid, bb_lower = bollinger(closes)
@@ -345,6 +346,7 @@ def build_analysis(df):
     last_hist = last_val(hist)
     last_sma20 = last_val(sma20_vals)
     last_sma50 = last_val(sma50_vals)
+    last_sma200 = last_val(sma200_vals)
     last_bb_upper = last_val(bb_upper)
     last_bb_lower = last_val(bb_lower)
 
@@ -356,6 +358,28 @@ def build_analysis(df):
     annualized_vol = round(daily_vol * np.sqrt(252) * 100, 2) if daily_vol else 0
     mean_return = returns.mean()
     sharpe = round((mean_return * 252) / (daily_vol * np.sqrt(252)) if daily_vol else 0, 2)
+
+    # Skewness & Kurtosis
+    n_ret = len(returns)
+    skewness = round(float(n_ret / ((n_ret-1)*(n_ret-2)) * np.sum(((returns - mean_return) / daily_vol) ** 3)), 3) if daily_vol and n_ret > 2 else 0
+    kurtosis = round(float(n_ret*(n_ret+1) / ((n_ret-1)*(n_ret-2)*(n_ret-3)) * np.sum(((returns - mean_return) / daily_vol) ** 4) - 3*(n_ret-1)**2/((n_ret-2)*(n_ret-3))), 3) if daily_vol and n_ret > 3 else 0
+
+    # Sortino ratio
+    downside_returns = returns[returns < 0]
+    downside_std = downside_returns.std() * np.sqrt(252) if len(downside_returns) > 0 else 0
+    sortino = round(float(mean_return * 252 / downside_std), 2) if downside_std and downside_std != 0 else 0
+
+    # Golden/Death Cross
+    golden_cross = False
+    death_cross = False
+    if last_sma50 is not None and last_sma200 is not None:
+        prev_sma50 = sma50_vals.iloc[-2] if len(sma50_vals) > 1 else None
+        prev_sma200 = sma200_vals.iloc[-2] if len(sma200_vals) > 1 else None
+        if prev_sma50 is not None and prev_sma200 is not None and not np.isnan(prev_sma50) and not np.isnan(prev_sma200):
+            if last_sma50 > last_sma200 and prev_sma50 <= prev_sma200:
+                golden_cross = True
+            elif last_sma50 < last_sma200 and prev_sma50 >= prev_sma200:
+                death_cross = True
 
     bull, bear = 0, 0
     if last_rsi is not None:
@@ -403,9 +427,11 @@ def build_analysis(df):
         "bb_upper": last_bb_upper, "bb_lower": last_bb_lower,
         "avg_vol": avg_vol, "vol_ratio": vol_ratio,
         "annualized_vol": annualized_vol, "sharpe": sharpe,
+        "sortino": sortino, "skewness": skewness, "kurtosis": kurtosis,
+        "golden_cross": golden_cross, "death_cross": death_cross, "last_sma200": last_sma200,
         "verdict": verdict, "bull_signals": bull, "bear_signals": bear,
         "patterns": patterns, "support": support, "resistance": resistance,
-        "sma20": sma20_vals, "sma50": sma50_vals,
+        "sma20": sma20_vals, "sma50": sma50_vals, "sma200": sma200_vals,
         "rsi_vals": rsi_vals, "macd_line": macd_line, "signal_line": signal_line,
         "hist": hist, "bb_upper_series": bb_upper, "bb_lower_series": bb_lower, "bb_mid_series": bb_mid,
         "res_trend": res_trend, "sup_trend": sup_trend,
@@ -814,6 +840,9 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
                                  line=dict(color="#2962ff", width=1.8)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["sma50"], name="SMA 50",
                                  line=dict(color="#ff9800", width=1.8)), row=1, col=1)
+        if analysis.get("sma200"):
+            fig.add_trace(go.Scatter(x=df["date"], y=analysis["sma200"], name="SMA 200",
+                                     line=dict(color="#9c27b0", width=1.8)), row=1, col=1)
 
     if show_bb:
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["bb_upper_series"], name="BB Upper",
@@ -1221,6 +1250,19 @@ else:
     with col_m5:
         st.metric("Sharpe Ratio", f"{analysis['sharpe']}")
 
+    # Golden/Death Cross alert
+    if analysis.get("golden_cross"):
+        st.success("❤️ GOLDEN CROSS detected! SMA50 crossed above SMA200 — strong bullish signal.")
+    elif analysis.get("death_cross"):
+        st.error("⚰️ DEATH CROSS detected! SMA50 crossed below SMA200 — strong bearish signal.")
+    # Skewness/Kurtosis info
+    sk = analysis.get("skewness", 0)
+    ku = analysis.get("kurtosis", 0)
+    so = analysis.get("sortino", 0)
+    sk_msg = "right-skewed (more big gains)" if sk > 0.5 else "left-skewed (more big losses)" if sk < -0.5 else "symmetric"
+    ku_msg = "fat tails (extreme moves likely)" if ku > 3 else "thin tails" if ku < 0 else "normal distribution"
+    st.info(f"Sortino: {so} | Skewness: {sk} ({sk_msg}) | Kurtosis: {ku} ({ku_msg})")
+
     # ── Two-column: Indicators + Patterns ──
     col_left, col_right = st.columns(2)
 
@@ -1231,8 +1273,10 @@ else:
                           "MACD Histogram", "BB Upper", "BB Lower",
                           "Support (20d low)", "Resistance (20d high)",
                           "Resistance Trend Slope", "Support Trend Slope",
-                          "Avg Volume (20d)", "Volume Ratio",
-                          "Annualized Volatility", "Sharpe-like Ratio"],
+                          "Golden Cross", "Death Cross",
+                          "SMA 200", "Avg Volume (20d)", "Volume Ratio",
+                          "Annualized Volatility", "Sharpe Ratio",
+                          "Sortino Ratio", "Skewness", "Kurtosis"],
             "Value": [
                 fmt_num(analysis["last_sma20"]), fmt_num(analysis["last_sma50"]),
                 f"{analysis['last_rsi']:.2f}" if analysis["last_rsi"] is not None else "\u2014",
@@ -1243,7 +1287,14 @@ else:
                 f"{analysis['res_trend']['slope']:+.4f}" if analysis.get('res_trend') else "\u2014",
                 f"{analysis['sup_trend']['slope']:+.4f}" if analysis.get('sup_trend') else "\u2014",
                 fmt_vol(analysis["avg_vol"]), f"{analysis['vol_ratio']}\u00d7",
+                "Yes ❤️" if analysis.get("golden_cross") else "No",
+                "Yes ⚰️" if analysis.get("death_cross") else "No",
+                fmt_num(analysis.get("last_sma200")) if analysis.get("last_sma200") else "—",
+                fmt_vol(analysis["avg_vol"]), f"{analysis['vol_ratio']}×",
                 f"{analysis['annualized_vol']}%", f"{analysis['sharpe']}",
+                f"{analysis.get('sortino', 0)}",
+                f"{analysis.get('skewness', 0)}",
+                f"{analysis.get('kurtosis', 0)}",
             ],
         }
         st.dataframe(pd.DataFrame(ind_data), use_container_width=True, hide_index=True)
