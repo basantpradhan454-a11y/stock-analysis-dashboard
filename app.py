@@ -52,18 +52,18 @@ def check_password():
     st.markdown("""
     <div style="display:flex;justify-content:center;align-items:center;min-height:60vh;">
       <div style="background:#151b23;border:1px solid #2a3441;border-radius:16px;padding:36px 40px;text-align:center;max-width:380px;">
-        <h2 style="color:#e6edf3;margin:0 0 8px;">U0001f512 Quant Desk</h2>
+        <h2 style="color:#e6edf3;margin:0 0 8px;">\U0001f512 Quant Desk</h2>
         <p style="color:#8b949e;font-size:13px;margin:0 0 20px;">Enter password to access the dashboard</p>
       </div>
     </div>
     """, unsafe_allow_html=True)
     pwd = st.text_input("Password", type="password", placeholder="Enter password...", label_visibility="collapsed")
-    if st.button("Unlock u2192", type="primary", use_container_width=True):
+    if st.button("Unlock \u2192", type="primary", use_container_width=True):
         if pwd == "dinesh@123":
             st.session_state["authenticated"] = True
             st.rerun()
         else:
-            st.error("u274c Incorrect password. Try again.")
+            st.error("\u274c Incorrect password. Try again.")
     st.stop()
     return False
 
@@ -1357,7 +1357,7 @@ else:
     with st.expander("TradingView Live Chart (native zoom + fullscreen)"):
         fs_col1, fs_col2 = st.columns([4, 1])
         with fs_col2:
-            if st.button("U0001f5faufe0f Open Fullscreen", key="tv_fs", use_container_width=True):
+            if st.button("\U0001f5fa\ufe0f Open Fullscreen", key="tv_fs", use_container_width=True):
                 st.session_state["tv_fullscreen"] = not st.session_state.get("tv_fullscreen", False)
         if st.session_state.get("tv_fullscreen", False):
             render_tradingview_fullscreen(asset.get("tv", ticker), theme)
