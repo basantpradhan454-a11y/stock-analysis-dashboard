@@ -160,7 +160,7 @@ def render_correlation():
     st.caption("Compare return correlations between assets to diversify your portfolio.")
     
     symbols_text = st.text_input("Symbols (comma-separated)", value="RELIANCE.NS, TCS.NS, INFY.NS, HDFCBANK.NS, ^NSEI", key="corr_sym")
-    period = st.selectbox("Period", ["3mo", "6mo", "1y", "2y"], index=2, key="corr_period")
+    period = st.selectbox("Period", ["3mo", "6mo", "1y", "2y", "5y", "10y"], index=5, key="corr_period")
     
     symbols = [s.strip() for s in symbols_text.split(",") if s.strip()]
     
@@ -204,7 +204,7 @@ def render_monte_carlo():
     with c2: days = st.slider("Days to Simulate", 10, 365, 90, key="mc_days")
     with c3: n_sims = st.slider("Simulations", 100, 5000, 500, 50, key="mc_sims")
     with c4: confidence = st.selectbox("Confidence", [90, 95, 99], index=1, key="mc_conf")
-    with c5: period = st.selectbox("Historical Data", ["3mo", "6mo", "1y", "2y"], index=2, key="mc_period")
+    with c5: period = st.selectbox("Historical Data", ["3mo", "6mo", "1y", "2y", "5y", "10y"], index=5, key="mc_period")
     
     if st.button("Run Simulation", type="primary", key="mc_run"):
         with st.spinner("Running Monte Carlo simulation..."):
@@ -267,7 +267,7 @@ def render_var():
     with c1: portfolio_value = st.number_input("Portfolio Value", value=1000000, step=100000, key="var_pv")
     with c2: symbols_text = st.text_input("Holdings (comma-sep)", value="RELIANCE.NS, TCS.NS, INFY.NS", key="var_sym")
     with c3: weights_text = st.text_input("Weights (comma-sep)", value="0.4, 0.35, 0.25", key="var_w")
-    with c4: period = st.selectbox("Lookback Period", ["3mo", "6mo", "1y", "2y"], index=2, key="var_period")
+    with c4: period = st.selectbox("Lookback Period", ["3mo", "6mo", "1y", "2y", "5y", "10y"], index=5, key="var_period")
     
     confidence_levels = st.multiselect("Confidence Levels", [90, 95, 99], default=[95, 99], key="var_conf")
     horizon = st.slider("Time Horizon (days)", 1, 20, 1, key="var_horizon")

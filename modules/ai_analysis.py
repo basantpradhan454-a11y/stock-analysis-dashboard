@@ -287,7 +287,7 @@ def _render_photo_upload():
             st.image(uploaded, use_container_width=True)
             sym_input = st.text_input("Symbol visible on chart (e.g. RELIANCE.NS, AAPL, BTC-USD)",
                 key="photo_chart_sym", placeholder="Type the ticker you see on the chart...")
-            period = st.selectbox("Data Period", ["6mo", "1y", "2y", "5y", "10y"], index=1, key="photo_chart_period")
+            period = st.selectbox("Data Period", ["6mo", "1y", "2y", "5y", "10y"], index=4, key="photo_chart_period")
             if st.button("\U0001f50d Load Real Chart", type="primary", key="photo_load_btn"):
                 if sym_input.strip():
                     st.session_state["photo_sym"] = sym_input.strip().upper()
@@ -358,7 +358,7 @@ def _render_full_analysis(df, sym=""):
         subplot_titles=("Price + SMA + BB + Fibonacci", "Volume + OBV", "RSI + MACD"))
     fig.add_trace(go.Candlestick(x=df["date"], open=df["open"], high=df["high"], low=df["low"], close=df["close"],
         name="OHLC", increasing_line_color="#26a69a", decreasing_line_color="#ef5350",
-        increasing_fillcolor="#26a69a", decreasing_fillcolor="#ef5350", line_width=1.5, whiskerwidth=0.5), row=1, col=1)
+        increasing_fillcolor="#26a69a", decreasing_fillcolor="#ef5350", line_width=2, whiskerwidth=0.3), row=1, col=1)
     fig.add_trace(go.Scatter(x=df["date"], y=sma50, name="SMA 50", line=dict(color="#2962ff", width=1.5)), row=1, col=1)
     fig.add_trace(go.Scatter(x=df["date"], y=sma200, name="SMA 200", line=dict(color="#ff9800", width=1.5)), row=1, col=1)
     fig.add_trace(go.Scatter(x=df["date"], y=ema20, name="EMA 20", line=dict(color="#e91e63", width=1.2), opacity=0.7), row=1, col=1)
@@ -728,7 +728,7 @@ def render_ai_analysis():
     with sub_tabs[0]: _render_photo_upload()
     with sub_tabs[1]:
         sym = st.text_input("Symbol", value="RELIANCE.NS", placeholder="AAPL, RELIANCE.NS, BTC-USD...", key="ai_analysis_sym")
-        period = st.selectbox("Period", ["6mo", "1y", "2y", "5y", "10y"], index=1, key="ai_analysis_period")
+        period = st.selectbox("Period", ["6mo", "1y", "2y", "5y", "10y"], index=4, key="ai_analysis_period")
         if st.button("\U0001f50d Run Full Analysis", type="primary", key="ai_run_analysis"):
             st.session_state["ai_analysis_data"] = {"sym": sym, "period": period}; st.rerun()
         data_params = st.session_state.get("ai_analysis_data")
@@ -744,7 +744,7 @@ def render_ai_analysis():
             st.info("Enter a symbol and click 'Run Full Analysis' to see comprehensive technical + quant + ML analysis.")
     with sub_tabs[2]:
         mc_sym = st.text_input("Symbol", value="RELIANCE.NS", key="mc_sym_input")
-        mc_period = st.selectbox("Historical Data Period", ["3mo", "6mo", "1y", "2y", "5y"], index=2, key="mc_period_select")
+        mc_period = st.selectbox("Historical Data Period", ["3mo", "6mo", "1y", "2y", "5y", "10y"], index=5, key="mc_period_select")
         if st.button("\U0001f3b2 Run Monte Carlo", type="primary", key="mc_run_btn"):
             st.session_state["mc_data"] = {"sym": mc_sym, "period": mc_period}; st.rerun()
         mc_data = st.session_state.get("mc_data")
@@ -756,7 +756,7 @@ def render_ai_analysis():
             st.info("Enter a symbol and click 'Run Monte Carlo' to simulate 30-day future price paths.")
     with sub_tabs[3]:
         ml_sym = st.text_input("Symbol", value="RELIANCE.NS", key="ml_sym_input")
-        ml_period = st.selectbox("Training Data Period", ["6mo", "1y", "2y", "5y"], index=1, key="ml_period_select")
+        ml_period = st.selectbox("Training Data Period", ["6mo", "1y", "2y", "5y", "10y"], index=4, key="ml_period_select")
         if st.button("\U0001f916 Train & Predict", type="primary", key="ml_run_btn"):
             st.session_state["ml_data"] = {"sym": ml_sym, "period": ml_period}; st.rerun()
         ml_data = st.session_state.get("ml_data")

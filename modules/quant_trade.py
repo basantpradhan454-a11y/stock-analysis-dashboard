@@ -288,7 +288,7 @@ def _render_backtest():
     with c1: sym = st.text_input("Symbol", value="RELIANCE.NS", key="qt_bt_sym")
     with c2: fast = st.slider("Fast MA", 3, 30, 10, key="qt_bt_fast")
     with c3: slow = st.slider("Slow MA", 10, 100, 30, key="qt_bt_slow")
-    with c4: period = st.selectbox("Period", ["6mo", "1y", "2y"], index=1, key="qt_bt_period")
+    with c4: period = st.selectbox("Period", ["6mo", "1y", "2y", "5y", "10y"], index=4, key="qt_bt_period")
 
     if st.button("Run Backtest", type="primary", key="qt_bt_run"):
         import yfinance as yf
@@ -455,7 +455,7 @@ def _render_correlation():
     st.caption("Compare return correlations between assets to diversify your portfolio.")
 
     syms = st.text_input("Symbols (comma-separated)", value="RELIANCE.NS, TCS.NS, INFY.NS, HDFCBANK.NS, ^NSEI", key="qt_corr_sym")
-    period = st.selectbox("Period", ["3mo", "6mo", "1y", "2y"], index=2, key="qt_corr_period")
+    period = st.selectbox("Period", ["3mo", "6mo", "1y", "2y", "5y", "10y"], index=5, key="qt_corr_period")
 
     if st.button("Compute Correlation", type="primary", key="qt_corr_btn"):
         symbols = [s.strip() for s in syms.split(",") if s.strip()]
@@ -491,7 +491,7 @@ def _render_montecarlo():
     with c2: days = st.slider("Days", 10, 365, 90, key="qt_mc_days")
     with c3: n_sims = st.slider("Simulations", 100, 5000, 500, 50, key="qt_mc_sims")
     with c4: conf = st.selectbox("Confidence", [90, 95, 99], index=1, key="qt_mc_conf")
-    with c5: period = st.selectbox("History", ["3mo", "6mo", "1y", "2y"], index=2, key="qt_mc_period")
+    with c5: period = st.selectbox("History", ["3mo", "6mo", "1y", "2y", "5y", "10y"], index=5, key="qt_mc_period")
 
     if st.button("Run Simulation", type="primary", key="qt_mc_run"):
         with st.spinner("Running Monte Carlo simulation..."):
@@ -556,7 +556,7 @@ def _render_var():
     with c1: pv = st.number_input("Portfolio Value", value=1000000, step=100000, key="qt_var_pv")
     with c2: syms = st.text_input("Holdings", value="RELIANCE.NS, TCS.NS, INFY.NS", key="qt_var_sym")
     with c3: weights_text = st.text_input("Weights", value="0.4, 0.35, 0.25", key="qt_var_w")
-    with c4: period = st.selectbox("Lookback", ["3mo", "6mo", "1y", "2y"], index=2, key="qt_var_period")
+    with c4: period = st.selectbox("Lookback", ["3mo", "6mo", "1y", "2y", "5y", "10y"], index=5, key="qt_var_period")
 
     confs = st.multiselect("Confidence Levels", [90, 95, 99], default=[95, 99], key="qt_var_conf")
     horizon = st.slider("Horizon (days)", 1, 20, 1, key="qt_var_horizon")

@@ -117,7 +117,7 @@ ASSETS = [
 ]
 
 # ── Navigation Tabs ──
-NAV_TABS = ["Dashboard", "AI Analysis", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Portfolio", "Trading Bot"]
+NAV_TABS = ["Dashboard", "AI Analysis", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Quant Trading", "Portfolio", "Trading Bot"]
 active_tab = st.sidebar.selectbox("Navigate", NAV_TABS, key="nav_tab")
 
 if active_tab != "Dashboard":
@@ -133,6 +133,9 @@ if active_tab != "Dashboard":
     elif active_tab == "Quant Trade":
         from modules.quant_trade import render_quant_trade
         render_quant_trade()
+    elif active_tab == "Quant Trading":
+        from modules.quant_trading import render_quant_trading
+        render_quant_trading()
     elif active_tab == "Portfolio":
         from modules.portfolio_tracker import render_portfolio_tracker
         render_portfolio_tracker()
@@ -825,15 +828,29 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         subplot_titles=("Price & Indicators", "Volume", "RSI (14)", "MACD (12, 26, 9)"),
     )
 
-    # TradingView-style candlestick - thicker bodies, cleaner colors
+    # TradingView-style candlestick - exact TradingView colors & styling
     fig.add_trace(go.Candlestick(
         x=df["date"], open=df["open"], high=df["high"], low=df["low"], close=df["close"],
         name="OHLC",
-        increasing_line_color="#26a69a", decreasing_line_color="#ef5350",
-        increasing_fillcolor="#26a69a", decreasing_fillcolor="#ef5350",
-        line_width=1.5,
-        whiskerwidth=0.5,
+        # TradingView exact colors: #26a69a (bullish green), #ef5350 (bearish red)
+        increasing_line_color="#26a69a",
+        decreasing_line_color="#ef5350",
+        increasing_fillcolor="#26a69a",
+        decreasing_fillcolor="#ef5350",
+        # Thicker wicks for better visibility
+        line_width=2,
+        # Narrow whiskers to emphasize body
+        whiskerwidth=0.3,
+        # Make sure body is visible even for small candles
+        selector=dict(type="candlestick"),
     ), row=1, col=1)
+
+    # Ensure minimum candle width (TradingView style: visible bodies)
+    fig.update_traces(
+        increasing_line_width=2,
+        decreasing_line_width=2,
+        selector=dict(type="candlestick"),
+    )
 
     if show_ma:
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["sma20"], name="SMA 20",
@@ -892,7 +909,7 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
 
     fig.update_layout(
         template=template,
-        height=780,
+        height=820,
         margin=dict(l=50, r=60, t=40, b=30),
         xaxis_rangeslider_visible=False,
         showlegend=True,
@@ -902,6 +919,9 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         plot_bgcolor=bg_color,
         hovermode="x unified",
         dragmode="zoom",
+        # TradingView-like crosshair
+        xaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikelength=8, spikecolor="rgba(150,150,150,0.4)"),
+        yaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikelength=8, spikecolor="rgba(150,150,150,0.4)"),
     )
     # TradingView-like axis styling
     fig.update_xaxes(showgrid=False, showline=True, linecolor=grid_color, mirror=True)
