@@ -174,7 +174,7 @@ if "connection" not in st.session_state:
 if "credentials" not in st.session_state:
     st.session_state.credentials = {}
 if "period" not in st.session_state:
-    st.session_state.period = "10y"
+    st.session_state.period = "2y"
 if "interval" not in st.session_state:
     st.session_state.interval = "1d"
 if "backtest_result" not in st.session_state:
@@ -248,7 +248,7 @@ def macd(series):
 
 def bollinger(series, period=20, mult=2):
     mid = series.rolling(period).mean()
-    std = series.rolling(period).std()
+    std = series.rolling(period).std(ddof=0)
     upper = (mid + mult * std).round(2)
     lower = (mid - mult * std).round(2)
     return upper, mid, lower
@@ -338,10 +338,13 @@ def build_analysis(df):
     bb_upper, bb_mid, bb_lower = bollinger(closes)
 
     def last_val(s):
-        v = s.iloc[-1]
-        if v is None or (isinstance(v, float) and np.isnan(v)):
+        try:
+            v = s.iloc[-1]
+            if v is None or (isinstance(v, float) and np.isnan(v)):
+                return None
+            return float(v)
+        except (IndexError, TypeError, ValueError):
             return None
-        return v
 
     last_rsi = last_val(rsi_vals)
     last_macd = last_val(macd_line)
@@ -460,7 +463,7 @@ def compute_ai_summary(df):
     delta = close.diff()
     gain = delta.clip(lower=0).rolling(14).mean()
     loss = (-delta.clip(upper=0)).rolling(14).mean()
-    rs = gain / loss
+    rs = gain / loss.replace(0, np.nan)
     rsi_val = 100 - (100 / (1 + rs))
 
     daily_returns = close.pct_change().dropna()
@@ -552,7 +555,7 @@ def generate_signals(df, rsi_buy=40, rsi_sell=65):
     delta = df["close"].diff()
     gain = delta.clip(lower=0).rolling(14).mean()
     loss = (-delta.clip(upper=0)).rolling(14).mean()
-    rs = gain / loss
+    rs = gain / loss.replace(0, np.nan)
     df["rsi_sig"] = 100 - (100 / (1 + rs))
 
     ema12 = df["close"].ewm(span=12, adjust=False).mean()
@@ -616,7 +619,7 @@ def run_backtest(df, initial_cash=100000.0, qty_per_trade=10):
 
     equity_series = pd.Series([e["equity"] for e in equity_curve])
     running_max = equity_series.cummax()
-    drawdown = (equity_series - running_max) / running_max * 100
+    drawdown = (equity_series - running_max) / running_max.replace(0, np.nan) * 100
     max_drawdown_pct = round(float(drawdown.min()), 2) if len(drawdown) else 0
 
     completed = [t for t in trades if t["action"] == "SELL"]
@@ -687,9 +690,15 @@ def fmt_vol(n):
     return str(int(n))
 
 def fmt_num(n):
-    if n is None: return "\u2014"
-    if isinstance(n, float) and np.isnan(n): return "\u2014"
-    return f"{n:,.0f}"
+    if n is None:
+        return "—"
+    try:
+        n = float(n)
+    except (TypeError, ValueError):
+        return "—"
+    if np.isnan(n) or np.isinf(n):
+        return "—"
+    return f"{n:,.2f}"
 
 # ──────────────────────────────────────────────
 # TRADINGVIEW EMBED
@@ -1091,8 +1100,8 @@ else:
         st.session_state.order_message = None
         st.rerun()
 
-    # Period fixed to 10y (live + historical)
-    st.session_state.period = "10y"
+    # Period fixed to 2y (live + historical)
+    st.session_state.period = "2y"
     st.session_state.interval = "1d"
     # ── Fetch data ──
     with st.spinner(f"Fetching real data for {ticker}..."):
@@ -1298,20 +1307,25 @@ else:
                           "Annualized Volatility", "Sharpe Ratio",
                           "Sortino Ratio", "Skewness", "Kurtosis"],
             "Value": [
-                fmt_num(analysis["last_sma20"]), fmt_num(analysis["last_sma50"]),
-                f"{analysis['last_rsi']:.2f}" if analysis["last_rsi"] is not None else "\u2014",
-                fmt_num(analysis["last_macd"]), fmt_num(analysis["last_signal"]),
+                fmt_num(analysis["last_sma20"]),
+                fmt_num(analysis["last_sma50"]),
+                f"{analysis['last_rsi']:.2f}" if analysis["last_rsi"] is not None else "—",
+                fmt_num(analysis["last_macd"]),
+                fmt_num(analysis["last_signal"]),
                 fmt_num(analysis["last_hist"]),
-                fmt_num(analysis["bb_upper"]), fmt_num(analysis["bb_lower"]),
-                f"\u20b9{analysis['support']}", f"\u20b9{analysis['resistance']}",
-                f"{analysis['res_trend']['slope']:+.4f}" if analysis.get('res_trend') else "\u2014",
-                f"{analysis['sup_trend']['slope']:+.4f}" if analysis.get('sup_trend') else "\u2014",
-                fmt_vol(analysis["avg_vol"]), f"{analysis['vol_ratio']}\u00d7",
+                fmt_num(analysis["bb_upper"]),
+                fmt_num(analysis["bb_lower"]),
+                f"₹{analysis['support']}",
+                f"₹{analysis['resistance']}",
+                f"{analysis['res_trend']['slope']:+.4f}" if analysis.get('res_trend') else "—",
+                f"{analysis['sup_trend']['slope']:+.4f}" if analysis.get('sup_trend') else "—",
                 "Yes ❤️" if analysis.get("golden_cross") else "No",
                 "Yes ⚰️" if analysis.get("death_cross") else "No",
                 fmt_num(analysis.get("last_sma200")) if analysis.get("last_sma200") else "—",
-                fmt_vol(analysis["avg_vol"]), f"{analysis['vol_ratio']}×",
-                f"{analysis['annualized_vol']}%", f"{analysis['sharpe']}",
+                fmt_vol(analysis["avg_vol"]),
+                f"{analysis['vol_ratio']}×",
+                f"{analysis['annualized_vol']}%",
+                f"{analysis['sharpe']}",
                 f"{analysis.get('sortino', 0)}",
                 f"{analysis.get('skewness', 0)}",
                 f"{analysis.get('kurtosis', 0)}",
