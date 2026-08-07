@@ -13,6 +13,9 @@ Endpoints:
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 import yfinance as yf
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from modules.data_fetch import get_download
 import pandas as pd
 import numpy as np
 
@@ -42,8 +45,8 @@ def get_assets():
 
 
 def fetch_ohlc(ticker: str, period: str, interval: str) -> pd.DataFrame:
-    df = yf.download(ticker, period=period, interval=interval, progress=False, auto_adjust=True)
-    if df.empty:
+    df, is_synthetic = get_download(ticker, period=period, interval=interval)
+    if df is None or df.empty:
         raise HTTPException(status_code=404, detail=f"No data found for {ticker}")
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.get_level_values(0)

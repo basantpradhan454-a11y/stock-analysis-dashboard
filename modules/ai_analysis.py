@@ -6,6 +6,7 @@ comprehensive technical + quant analysis with skewness/kurtosis.
 
 import streamlit as st
 import yfinance as yf
+from modules.data_fetch import get_history
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -45,6 +46,147 @@ def _obv(close, vol):
 def _vwap(h, l, c, v):
     tp = (h + l + c) / 3
     return (tp * v).cumsum() / v.cumsum()
+
+def _stochastic(high, low, close, period=14, smooth_k=3, smooth_d=3):
+    """%K / %D stochastic oscillator."""
+    lowest = low.rolling(period).min()
+    highest = high.rolling(period).max()
+    rng = (highest - lowest).replace(0, np.nan)
+    raw_k = ((close - lowest) / rng * 100).fillna(50)
+    k = raw_k.rolling(smooth_k).mean()
+    d = k.rolling(smooth_d).mean()
+    return k, d
+
+
+def _composite_signal_score(close, sma_short, sma_long, rsi_arr, macd_line, signal_line, hist, bb_upper, bb_lower, stoch_k):
+    """TradingView-style composite bull/bear score (0-100) from a weighted blend of
+    MA Cross, RSI, MACD, Bollinger Bands, Stochastic and 10-bar momentum (ROC)."""
+    signals = []
+    bull_points = 0.0
+    total_points = 0.0
+
+    def push(name, verdict, weight, detail):
+        nonlocal bull_points, total_points
+        signals.append({"name": name, "verdict": verdict, "detail": detail})
+        total_points += weight
+        if verdict == "bullish":
+            bull_points += weight
+        elif verdict == "neutral":
+            bull_points += weight / 2
+
+    def last_val(series):
+        try:
+            x = series.iloc[-1]
+            return None if pd.isna(x) else float(x)
+        except Exception:
+            return None
+
+    ss, sl_ = last_val(sma_short), last_val(sma_long)
+    if ss is not None and sl_ is not None:
+        bullish = ss > sl_
+        push("MA Cross", "bullish" if bullish else "bearish", 2,
+             "Short MA above long MA — uptrend intact" if bullish else "Short MA below long MA — downtrend intact")
+
+    rv = last_val(rsi_arr)
+    if rv is not None:
+        if rv > 70:
+            push("RSI (14)", "bearish", 1.5, f"RSI {rv:.1f} — overbought")
+        elif rv < 30:
+            push("RSI (14)", "bullish", 1.5, f"RSI {rv:.1f} — oversold, rebound potential")
+        else:
+            push("RSI (14)", "neutral", 1.5, f"RSI {rv:.1f} — neutral zone")
+
+    ml, sg = last_val(macd_line), last_val(signal_line)
+    if ml is not None and sg is not None:
+        bullish = ml > sg
+        h_now = last_val(hist)
+        h_prev = None
+        try:
+            if len(hist) > 1 and not pd.isna(hist.iloc[-2]):
+                h_prev = float(hist.iloc[-2])
+        except Exception:
+            pass
+        rising = h_now is not None and h_prev is not None and h_now > h_prev
+        push("MACD", "bullish" if bullish else "bearish", 2,
+             f"MACD line {'above' if bullish else 'below'} signal, histogram {'expanding' if rising else 'contracting'}")
+
+    bu, bl = last_val(bb_upper), last_val(bb_lower)
+    price = float(close.iloc[-1])
+    if bu is not None and bl is not None and bu != bl:
+        pos = (price - bl) / (bu - bl)
+        if pos > 0.95:
+            push("Bollinger Bands", "bearish", 1, "Price pressing upper band — stretched")
+        elif pos < 0.05:
+            push("Bollinger Bands", "bullish", 1, "Price pressing lower band — mean-reversion setup")
+        else:
+            push("Bollinger Bands", "neutral", 1, "Price mid-band, no extreme")
+
+    kv = last_val(stoch_k)
+    if kv is not None:
+        if kv > 80:
+            push("Stochastic (14,3)", "bearish", 1, f"%K {kv:.1f} — overbought")
+        elif kv < 20:
+            push("Stochastic (14,3)", "bullish", 1, f"%K {kv:.1f} — oversold")
+        else:
+            push("Stochastic (14,3)", "neutral", 1, f"%K {kv:.1f} — mid-range")
+
+    if len(close) >= 11:
+        roc = (float(close.iloc[-1]) - float(close.iloc[-11])) / float(close.iloc[-11]) * 100
+        verdict = "bullish" if roc > 0.5 else "bearish" if roc < -0.5 else "neutral"
+        push("Momentum (ROC-10)", verdict, 1.5, f"{'+' if roc >= 0 else ''}{roc:.2f}% over 10 bars")
+
+    score = round((bull_points / total_points) * 100) if total_points > 0 else 50
+    return score, signals
+
+
+def _find_entry_exit_points(df, sma_short, sma_long, rsi_arr):
+    """Rule-based long entry/exit swing points: MA cross confirmed by RSI."""
+    points = []
+    in_position = False
+    for i in range(1, len(df)):
+        s0, s1 = sma_short.iloc[i - 1], sma_short.iloc[i]
+        l0, l1 = sma_long.iloc[i - 1], sma_long.iloc[i]
+        if pd.isna(s0) or pd.isna(s1) or pd.isna(l0) or pd.isna(l1):
+            continue
+        crossed_up = s0 <= l0 and s1 > l1
+        crossed_down = s0 >= l0 and s1 < l1
+        r = rsi_arr.iloc[i]
+        r = None if pd.isna(r) else float(r)
+        if not in_position and crossed_up and (r is None or r < 65):
+            points.append({"i": i, "type": "entry", "price": float(df["close"].iloc[i]), "date": df["date"].iloc[i]})
+            in_position = True
+        elif in_position and crossed_down:
+            points.append({"i": i, "type": "exit", "price": float(df["close"].iloc[i]), "date": df["date"].iloc[i]})
+            in_position = False
+    return points
+
+
+def _signal_gauge_chart(score):
+    """TradingView-style bull/bear gauge for the composite signal score."""
+    label = "BULLISH" if score >= 65 else "BEARISH" if score <= 35 else "NEUTRAL"
+    bar_color = "#26a69a" if score >= 65 else "#ef5350" if score <= 35 else "#ff9800"
+    fig = go.Figure(go.Indicator(
+        mode="gauge+number",
+        value=score,
+        number={"font": {"size": 34, "color": bar_color}},
+        title={"text": f"Signal Score — {label}", "font": {"size": 13}},
+        gauge={
+            "axis": {"range": [0, 100], "tickwidth": 1},
+            "bar": {"color": bar_color, "thickness": 0.28},
+            "bgcolor": "rgba(0,0,0,0)",
+            "borderwidth": 0,
+            "steps": [
+                {"range": [0, 35], "color": "rgba(239,83,80,0.30)"},
+                {"range": [35, 65], "color": "rgba(255,152,0,0.25)"},
+                {"range": [65, 100], "color": "rgba(38,166,154,0.30)"},
+            ],
+            "threshold": {"line": {"color": "#fff", "width": 3}, "thickness": 0.85, "value": score},
+        },
+    ))
+    fig.update_layout(height=220, margin=dict(l=20, r=20, t=50, b=10),
+                       paper_bgcolor="rgba(0,0,0,0)", font={"color": "#c9d1d9"})
+    return fig
+
 
 def _fibonacci_levels(df, lookback=100):
     recent = df.tail(lookback)
@@ -265,13 +407,15 @@ def _collect_importance(node, importance):
 
 @st.cache_data(ttl=300, show_spinner=False)
 def _fetch_data(sym, period="1y"):
-    df = yf.Ticker(sym).history(period=period, interval="1d")
-    if df.empty:
+    df, is_synthetic = get_history(sym, period=period, interval="1d")
+    if df is None or df.empty:
         return None
     df = df.reset_index()
-    df = df.rename(columns={"Date": "date", "Open": "open", "High": "high",
+    date_col = "Date" if "Date" in df.columns else df.columns[0]
+    df = df.rename(columns={date_col: "date", "Open": "open", "High": "high",
                             "Low": "low", "Close": "close", "Volume": "volume"})
     df["date"] = pd.to_datetime(df["date"])
+    df.attrs["synthetic"] = is_synthetic
     return df
 
 
@@ -299,6 +443,8 @@ def _render_photo_upload():
             sym = st.session_state.get("photo_sym", "")
             if sym:
                 df = _fetch_data(sym, st.session_state.get("photo_period", "1y"))
+                if df is not None and df.attrs.get("synthetic"):
+                    st.caption("\u26a0\ufe0f Live feed rate-limited \u2014 showing simulated candles.")
                 if df is not None and len(df) > 10:
                     _render_full_analysis(df, sym)
                 else:
@@ -321,6 +467,11 @@ def _render_full_analysis(df, sym=""):
     # NEW: Golden/Death Cross + Candlestick patterns
     cross_signals, golden_dates, death_dates = _golden_death_cross(sma50, sma200)
     candle_patterns = _detect_candlestick_patterns(df)
+    # NEW: Stochastic oscillator + composite signal score + entry/exit markers
+    stoch_k, stoch_d = _stochastic(high, low, close)
+    signal_score, signal_breakdown = _composite_signal_score(
+        close, ema20, sma50, rsi, macd, macd_sig, macd_hist, bb_u, bb_l, stoch_k)
+    entry_exit_points = _find_entry_exit_points(df, ema20, sma50, rsi)
 
     last = df.iloc[-1]; last_close = float(last["close"])
     last_rsi = float(rsi.iloc[-1]) if not pd.isna(rsi.iloc[-1]) else 50
@@ -353,12 +504,31 @@ def _render_full_analysis(df, sym=""):
             st.markdown(f"- {msg}")
 
     st.markdown(f"#### \U0001f4ca {sym} \u2014 Technical Analysis Chart")
-    fig = make_subplots(rows=3, cols=1, shared_xaxes=True, vertical_spacing=0.05,
-        row_heights=[0.6, 0.2, 0.2],
-        subplot_titles=("Price + SMA + BB + Fibonacci", "Volume + OBV", "RSI + MACD"))
+    fig = make_subplots(rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.04,
+        row_heights=[0.48, 0.15, 0.17, 0.16],
+        subplot_titles=("Price + SMA + BB + Fibonacci + Entry/Exit", "Volume + OBV", "RSI + MACD", "Stochastic (14,3)"))
     fig.add_trace(go.Candlestick(x=df["date"], open=df["open"], high=df["high"], low=df["low"], close=df["close"],
         name="OHLC", increasing_line_color="#26a69a", decreasing_line_color="#ef5350",
         increasing_fillcolor="#26a69a", decreasing_fillcolor="#ef5350", line_width=2, whiskerwidth=0.3), row=1, col=1)
+    if entry_exit_points:
+        entries = [p for p in entry_exit_points if p["type"] == "entry"]
+        exits = [p for p in entry_exit_points if p["type"] == "exit"]
+        if entries:
+            fig.add_trace(go.Scatter(
+                x=[p["date"] for p in entries], y=[p["price"] * 0.985 for p in entries],
+                mode="markers+text", text=["BUY"] * len(entries), textposition="bottom center",
+                textfont=dict(size=9, color="#26a69a", family="Trebuchet MS, sans-serif"),
+                marker=dict(symbol="triangle-up", size=11, color="#26a69a", line=dict(color="#0d3b30", width=1)),
+                name="Entry (BUY)", hovertext=[f"BUY @ {p['price']:.2f}" for p in entries], hoverinfo="text",
+            ), row=1, col=1)
+        if exits:
+            fig.add_trace(go.Scatter(
+                x=[p["date"] for p in exits], y=[p["price"] * 1.015 for p in exits],
+                mode="markers+text", text=["SELL"] * len(exits), textposition="top center",
+                textfont=dict(size=9, color="#ef5350", family="Trebuchet MS, sans-serif"),
+                marker=dict(symbol="triangle-down", size=11, color="#ef5350", line=dict(color="#4a1414", width=1)),
+                name="Exit (SELL)", hovertext=[f"SELL @ {p['price']:.2f}" for p in exits], hoverinfo="text",
+            ), row=1, col=1)
     fig.add_trace(go.Scatter(x=df["date"], y=sma50, name="SMA 50", line=dict(color="#2962ff", width=1.5)), row=1, col=1)
     fig.add_trace(go.Scatter(x=df["date"], y=sma200, name="SMA 200", line=dict(color="#ff9800", width=1.5)), row=1, col=1)
     fig.add_trace(go.Scatter(x=df["date"], y=ema20, name="EMA 20", line=dict(color="#e91e63", width=1.2), opacity=0.7), row=1, col=1)
@@ -385,18 +555,43 @@ def _render_full_analysis(df, sym=""):
         marker_color=["#26a69a" if h >= 0 else "#ef5350" for h in macd_hist], opacity=0.5), row=3, col=1)
     fig.add_trace(go.Scatter(x=df["date"], y=macd, name="MACD", line=dict(color="#2962ff", width=1.5)), row=3, col=1)
     fig.add_trace(go.Scatter(x=df["date"], y=macd_sig, name="Signal", line=dict(color="#ff9800", width=1.5)), row=3, col=1)
-    fig.update_layout(template="plotly_dark", height=700, margin=dict(l=50, r=60, t=40, b=30),
+    fig.add_trace(go.Scatter(x=df["date"], y=stoch_k, name="%K", line=dict(color="#2962ff", width=1.5)), row=4, col=1)
+    fig.add_trace(go.Scatter(x=df["date"], y=stoch_d, name="%D", line=dict(color="#ff9800", width=1.5)), row=4, col=1)
+    fig.add_hline(y=80, line_dash="dot", line_color="#ef5350", opacity=0.5, row=4, col=1)
+    fig.add_hline(y=20, line_dash="dot", line_color="#26a69a", opacity=0.5, row=4, col=1)
+
+    fig.update_layout(template="plotly_dark", height=820, margin=dict(l=50, r=60, t=40, b=30),
         xaxis_rangeslider_visible=False, showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         font=dict(size=10, family="Trebuchet MS, sans-serif"),
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        hovermode="x unified", dragmode="zoom")
+        hovermode="x unified",
+        # TradingView-style zoom: drag to pan, scroll wheel to zoom (no click-drag box zoom)
+        dragmode="pan")
     fig.update_xaxes(showgrid=False, showline=True, linecolor="rgba(50,50,50,0.3)")
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="rgba(50,50,50,0.2)", side="right", showline=True, linecolor="rgba(50,50,50,0.3)")
     fig.update_yaxes(tickformat=".2f", row=1, col=1)
+    fig.update_yaxes(range=[0, 100], row=4, col=1)
     st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True, "displayModeBar": True, "displaylogo": False, "responsive": True,
         "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
+
+    # ── NEW: Composite Signal Score gauge + breakdown ──
+    st.markdown("#### \U0001f3af Composite Signal Score")
+    gcol1, gcol2 = st.columns([1, 2])
+    with gcol1:
+        st.plotly_chart(_signal_gauge_chart(signal_score), use_container_width=True, config={"displayModeBar": False})
+    with gcol2:
+        for sig in signal_breakdown:
+            icon = "\U0001f7e2" if sig["verdict"] == "bullish" else "\U0001f534" if sig["verdict"] == "bearish" else "\u26aa"
+            st.markdown(f"{icon} **{sig['name']}** \u2014 {sig['detail']}")
+    if entry_exit_points:
+        with st.expander(f"\U0001f4cc Entry/Exit signals detected \u2014 EMA20/SMA50 cross + RSI confirm ({len(entry_exit_points)})"):
+            for p in entry_exit_points[-10:]:
+                tag = "\U0001f7e2 BUY" if p["type"] == "entry" else "\U0001f534 SELL"
+                st.markdown(f"- **{p['date'].strftime('%Y-%m-%d')}** \u2014 {tag} @ \u20b9{p['price']:.2f}")
+    else:
+        st.caption("No EMA20/SMA50 crossover entry/exit signals in this window yet.")
 
     # ── NEW: Candlestick Pattern Detection ──
     st.markdown("#### \U0001f50d Candlestick Patterns (last 10 days)")
@@ -752,6 +947,8 @@ def render_ai_analysis():
         data_params = st.session_state.get("ai_analysis_data")
         if data_params:
             df = _fetch_data(data_params["sym"], data_params["period"])
+            if df is not None and df.attrs.get("synthetic"):
+                st.caption("\u26a0\ufe0f Live feed rate-limited \u2014 showing simulated candles.")
             if df is not None and len(df) > 10:
                 _render_full_analysis(df, data_params["sym"]); st.markdown("---")
                 _render_monte_carlo(df, data_params["sym"]); st.markdown("---")
@@ -768,6 +965,8 @@ def render_ai_analysis():
         mc_data = st.session_state.get("mc_data")
         if mc_data:
             df = _fetch_data(mc_data["sym"], mc_data["period"])
+            if df is not None and df.attrs.get("synthetic"):
+                st.caption("\u26a0\ufe0f Live feed rate-limited \u2014 showing simulated candles.")
             if df is not None and len(df) > 20: _render_monte_carlo(df, mc_data["sym"])
             else: st.error(f"Could not fetch data for {mc_data['sym']}")
         else:
@@ -780,6 +979,8 @@ def render_ai_analysis():
         ml_data = st.session_state.get("ml_data")
         if ml_data:
             df = _fetch_data(ml_data["sym"], ml_data["period"])
+            if df is not None and df.attrs.get("synthetic"):
+                st.caption("\u26a0\ufe0f Live feed rate-limited \u2014 showing simulated candles.")
             if df is not None and len(df) > 50: _render_ml_prediction(df, ml_data["sym"])
             else: st.error(f"Could not fetch data for {ml_data['sym']}")
         else:

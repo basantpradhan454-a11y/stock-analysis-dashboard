@@ -5,6 +5,7 @@ Monte Carlo simulator, VaR, factor exposure, quant signal screener, P&L calendar
 
 import streamlit as st
 import yfinance as yf
+from modules.data_fetch import get_history
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -175,8 +176,8 @@ def render_correlation():
             returns_df = pd.DataFrame()
             for sym in symbols:
                 try:
-                    df = yf.Ticker(sym).history(period=period, interval="1d")
-                    if not df.empty:
+                    df, _ = get_history(sym, period=period, interval="1d")
+                    if df is not None and not df.empty:
                         returns_df[sym] = df["Close"].pct_change()
                 except Exception:
                     pass
@@ -220,10 +221,12 @@ def render_monte_carlo():
     
     if st.button("Run Simulation", type="primary", key="mc_run"):
         with st.spinner("Running Monte Carlo simulation..."):
-            df = yf.Ticker(sym).history(period=period, interval="1d")
-            if df.empty:
+            df, is_synthetic = get_history(sym, period=period, interval="1d")
+            if df is None or df.empty:
                 st.error(f"No data for {sym}")
                 return
+            if is_synthetic:
+                st.caption("\u26a0\ufe0f Live feed rate-limited \u2014 showing simulated candles.")
             
             S0 = float(df["Close"].iloc[-1])
             returns = df["Close"].pct_change().dropna()
@@ -306,8 +309,8 @@ def render_var():
             returns_df = pd.DataFrame()
             for sym in symbols:
                 try:
-                    df = yf.Ticker(sym).history(period=period, interval="1d")
-                    if not df.empty:
+                    df, _ = get_history(sym, period=period, interval="1d")
+                    if df is not None and not df.empty:
                         returns_df[sym] = df["Close"].pct_change()
                 except Exception:
                     pass
@@ -406,8 +409,8 @@ def render_quant_screener():
         for i, sym in enumerate(symbols):
             progress.progress((i + 1) / max(len(symbols), 1))
             try:
-                df = yf.Ticker(sym).history(period="3mo", interval="1d")
-                if df.empty or len(df) < 50:
+                df, _ = get_history(sym, period="3mo", interval="1d")
+                if df is None or df.empty or len(df) < 50:
                     continue
                 close = df["Close"]
                 rsi = 100 - 100 / (1 + close.diff().clip(lower=0).rolling(14).mean() / (-close.diff().clip(upper=0).rolling(14).mean().replace(0, np.nan)))

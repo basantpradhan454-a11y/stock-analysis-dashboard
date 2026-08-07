@@ -4,6 +4,7 @@ Test RSI, MACD, EMA, BB strategies on real historical data.
 
 import streamlit as st
 import yfinance as yf
+from modules.data_fetch import get_history
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -30,9 +31,10 @@ STRATEGIES = {
 
 @st.cache_data(ttl=600, show_spinner=False)
 def _fetch_data(sym, period, interval):
-    df = yf.Ticker(sym).history(period=period, interval=interval)
-    if df.empty: return pd.DataFrame()
+    df, is_synthetic = get_history(sym, period=period, interval=interval)
+    if df is None or df.empty: return pd.DataFrame()
     df.index = pd.to_datetime(df.index)
+    df.attrs["synthetic"] = is_synthetic
     return df
 
 def _max_drawdown(equity):

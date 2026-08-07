@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import yfinance as yf
+from modules.data_fetch import get_download
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
@@ -189,9 +190,10 @@ if "order_message" not in st.session_state:
 
 @st.cache_data(ttl=300, show_spinner=False)
 def fetch_ohlc(ticker, period="6mo", interval="1d"):
-    """Fetch real OHLC data using yfinance. Returns DataFrame with lowercase columns."""
+    """Fetch OHLC data (real via yfinance, safe synthetic fallback if rate-limited).
+    Returns DataFrame with lowercase columns, or None if truly no data at all."""
     try:
-        df = yf.download(ticker, period=period, interval=interval, progress=False, auto_adjust=True)
+        df, is_synthetic = get_download(ticker, period=period, interval=interval)
         if df is None or df.empty:
             return None
         if isinstance(df.columns, pd.MultiIndex):
@@ -214,6 +216,7 @@ def fetch_ohlc(ticker, period="6mo", interval="1d"):
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors="coerce")
         df = df.dropna(subset=["open", "high", "low", "close"])
+        df.attrs["synthetic"] = is_synthetic
         return df
     except Exception:
         return None
@@ -926,7 +929,7 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         paper_bgcolor=bg_color,
         plot_bgcolor=bg_color,
         hovermode="x unified",
-        dragmode="zoom",
+        dragmode="pan",
         # TradingView-like crosshair
         xaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across", spikecolor="rgba(150,150,150,0.4)"),
         yaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across", spikecolor="rgba(150,150,150,0.4)"),
@@ -1150,6 +1153,10 @@ else:
             st.session_state.selected_asset = None
             st.rerun()
         st.stop()
+    if df.attrs.get("synthetic"):
+        st.info(f"\u26a0\ufe0f Yahoo Finance is rate-limiting right now \u2014 showing deterministic "
+                f"simulated candles for {ticker} so the app keeps working. Real data resumes "
+                "automatically once the limit clears.")
 
     analysis = build_analysis(df)
     last_price = float(df["close"].iloc[-1])
@@ -1222,6 +1229,8 @@ else:
         if st.button("\U0001f504 Run Backtest", use_container_width=True):
             with st.spinner("Running backtest simulation..."):
                 bt_df = fetch_ohlc(ticker, "1y", "1d")
+                if bt_df is not None and bt_df.attrs.get("synthetic"):
+                    st.caption("\u26a0\ufe0f Using simulated data for the backtest (live feed rate-limited).")
                 if bt_df is not None and len(bt_df) > 50:
                     st.session_state.backtest_result = run_backtest(bt_df)
                 else:

@@ -9,6 +9,7 @@ import numpy as np
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import math
+from modules.data_fetch import get_history
 
 # ═══════════════════════════════════════════════════════════════════════════
 # STOCK DATABASE (matching the HTML)
@@ -303,12 +304,13 @@ def _render_backtest():
     with c4: period = st.selectbox("Period", ["6mo", "1y", "2y", "5y", "10y"], index=4, key="qt_bt_period")
 
     if st.button("Run Backtest", type="primary", key="qt_bt_run"):
-        import yfinance as yf
         with st.spinner("Running backtest..."):
-            df = yf.Ticker(sym).history(period=period, interval="1d")
-            if df.empty:
+            df, is_synthetic = get_history(sym, period=period, interval="1d")
+            if df is None or df.empty:
                 st.error("No data.")
                 return
+            if is_synthetic:
+                st.caption("\u26a0\ufe0f Live feed rate-limited \u2014 showing simulated candles.")
             df["MA_fast"] = df["Close"].rolling(fast).mean()
             df["MA_slow"] = df["Close"].rolling(slow).mean()
             df["Signal"] = (df["MA_fast"] > df["MA_slow"]).astype(int).diff()
@@ -474,7 +476,6 @@ def _render_optionpricer():
 # 7. CORRELATION MATRIX
 # ═══════════════════════════════════════════════════════════════════════════
 def _render_correlation():
-    import yfinance as yf
     st.markdown("## \U0001f517 Correlation Matrix")
     st.caption("Compare return correlations between assets to diversify your portfolio.")
 
@@ -487,8 +488,8 @@ def _render_correlation():
             rdf = pd.DataFrame()
             for sym in symbols:
                 try:
-                    df = yf.Ticker(sym).history(period=period, interval="1d")
-                    if not df.empty:
+                    df, _ = get_history(sym, period=period, interval="1d")
+                    if df is not None and not df.empty:
                         rdf[sym] = df["Close"].pct_change()
                 except Exception:
                     pass
@@ -512,7 +513,6 @@ def _render_correlation():
 # 8. MONTE CARLO SIMULATOR
 # ═══════════════════════════════════════════════════════════════════════════
 def _render_montecarlo():
-    import yfinance as yf
     st.markdown("## \U0001f3b0 Monte Carlo Simulator")
     st.caption("Simulate future price paths using Geometric Brownian Motion (GBM).")
 
@@ -525,10 +525,12 @@ def _render_montecarlo():
 
     if st.button("Run Simulation", type="primary", key="qt_mc_run"):
         with st.spinner("Running Monte Carlo simulation..."):
-            df = yf.Ticker(sym).history(period=period, interval="1d")
-            if df.empty:
+            df, is_synthetic = get_history(sym, period=period, interval="1d")
+            if df is None or df.empty:
                 st.error(f"No data for {sym}")
                 return
+            if is_synthetic:
+                st.caption("\u26a0\ufe0f Live feed rate-limited \u2014 showing simulated candles.")
             S0 = float(df["Close"].iloc[-1])
             rets = df["Close"].pct_change().dropna()
             mu = rets.mean() * 252
@@ -575,7 +577,6 @@ def _render_montecarlo():
 # 9. VALUE AT RISK
 # ═══════════════════════════════════════════════════════════════════════════
 def _render_var():
-    import yfinance as yf
     # Pure Python normal distribution (no scipy needed)
     import math as _m2
     def _norm_cdf(x):
@@ -612,8 +613,8 @@ def _render_var():
             rdf = pd.DataFrame()
             for sym in symbols:
                 try:
-                    df = yf.Ticker(sym).history(period=period, interval="1d")
-                    if not df.empty:
+                    df, _ = get_history(sym, period=period, interval="1d")
+                    if df is not None and not df.empty:
                         rdf[sym] = df["Close"].pct_change()
                 except Exception:
                     pass
@@ -685,7 +686,6 @@ def _render_factor():
 # 11. QUANT SIGNAL SCREENER
 # ═══════════════════════════════════════════════════════════════════════════
 def _render_screener_quant():
-    import yfinance as yf
     st.markdown("## \U0001f9e0 Quant Signal Screener")
     st.caption("Screen multiple stocks for buy/sell signals based on technical indicators.")
 
@@ -698,8 +698,8 @@ def _render_screener_quant():
         for i, sym in enumerate(symbols):
             prog.progress((i + 1) / max(len(symbols), 1))
             try:
-                df = yf.Ticker(sym).history(period="3mo", interval="1d")
-                if df.empty or len(df) < 50:
+                df, _ = get_history(sym, period="3mo", interval="1d")
+                if df is None or df.empty or len(df) < 50:
                     continue
                 close = df["Close"]
                 rsi = 100 - 100 / (1 + close.diff().clip(lower=0).rolling(14).mean() / (-close.diff().clip(upper=0).rolling(14).mean().replace(0, np.nan)))

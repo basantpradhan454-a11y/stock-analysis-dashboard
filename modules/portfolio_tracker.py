@@ -5,6 +5,7 @@ Data: yfinance (stocks/NSE) + CoinGecko (crypto)
 
 import streamlit as st
 import yfinance as yf
+from modules.data_fetch import get_history
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
@@ -35,8 +36,8 @@ def _get_live_price(sym):
             return r.json()[GECKO_IDS[sym_up]]["usd"]
         except Exception: return None
     try:
-        h = yf.Ticker(sym).history(period="1d")
-        return float(h["Close"].iloc[-1]) if not h.empty else None
+        h, _ = get_history(sym, period="1d", interval="1d")
+        return float(h["Close"].iloc[-1]) if h is not None and not h.empty else None
     except Exception: return None
 
 def _fmt_price(p):

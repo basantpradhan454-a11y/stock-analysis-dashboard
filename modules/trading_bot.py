@@ -5,6 +5,7 @@ DEMO / PAPER TRADING by default. Live trading requires explicit user consent.
 
 import streamlit as st
 import yfinance as yf
+from modules.data_fetch import get_history
 import pandas as pd
 import numpy as np
 import json
@@ -250,8 +251,9 @@ def _run_bot_analysis():
 
     for symbol in symbols[:5]:
         with st.spinner(f"Analyzing {symbol}..."):
-            df = yf.Ticker(symbol).history(period="1y", interval="1d")
-            if df.empty: continue
+            df, is_synthetic = get_history(symbol, period="1y", interval="1d")
+            if df is None or df.empty: continue
+            if is_synthetic: st.caption(f"\u26a0\ufe0f {symbol}: live feed rate-limited \u2014 showing simulated candles.")
             df.columns = [c.capitalize() for c in df.columns]
             decision = _ai_analyze_and_decide(df, symbol)
             price = decision["close"]

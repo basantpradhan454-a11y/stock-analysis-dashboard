@@ -5,6 +5,7 @@ DEMO / PAPER TRADING only. No real money.
 
 import streamlit as st
 import yfinance as yf
+from modules.data_fetch import get_history
 import pandas as pd
 import numpy as np
 import json
@@ -213,8 +214,9 @@ def render_strategy_bot():
     with bc3: bt_capital = st.number_input("Capital", value=100000, step=10000, key="sb_capital")
     if st.button("Run Backtest", type="primary", use_container_width=True, key="sb_run"):
         with st.spinner(f"Fetching {bt_period} data..."):
-            df = yf.Ticker(bt_symbol).history(period=bt_period, interval="1d")
-            if df.empty: st.error(f"No data for {bt_symbol}"); return
+            df, is_synthetic = get_history(bt_symbol, period=bt_period, interval="1d")
+            if df is None or df.empty: st.error(f"No data for {bt_symbol}"); return
+            if is_synthetic: st.caption("\u26a0\ufe0f Live feed rate-limited \u2014 showing simulated candles.")
             df.columns = [c.capitalize() for c in df.columns]
         with st.spinner("Running backtest..."):
             result = run_strategy_backtest(df, parsed, initial_capital=bt_capital)
