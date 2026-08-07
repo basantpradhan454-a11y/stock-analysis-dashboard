@@ -172,7 +172,7 @@ def render_correlation():
                     df = yf.Ticker(sym).history(period=period, interval="1d")
                     if not df.empty:
                         returns_df[sym] = df["Close"].pct_change()
-                except:
+                except Exception:
                     pass
         
         if returns_df.empty or len(returns_df.columns) < 2:
@@ -276,7 +276,7 @@ def render_var():
         symbols = [s.strip() for s in symbols_text.split(",") if s.strip()]
         try:
             weights = [float(w.strip()) for w in weights_text.split(",")]
-        except:
+        except Exception:
             st.error("Invalid weights format.")
             return
         
@@ -291,7 +291,7 @@ def render_var():
                     df = yf.Ticker(sym).history(period=period, interval="1d")
                     if not df.empty:
                         returns_df[sym] = df["Close"].pct_change()
-                except:
+                except Exception:
                     pass
         
         if returns_df.empty:
@@ -380,7 +380,7 @@ def render_quant_screener():
         results = []
         progress = st.progress(0)
         for i, sym in enumerate(symbols):
-            progress.progress((i + 1) / len(symbols))
+            progress.progress((i + 1) / max(len(symbols), 1))
             try:
                 df = yf.Ticker(sym).history(period="3mo", interval="1d")
                 if df.empty or len(df) < 50:
@@ -420,7 +420,7 @@ def render_quant_screener():
                     "Trend": "Up" if last_sma20 > last_sma50 else "Down",
                     "Signal": action, "Score": bull,
                 })
-            except:
+            except Exception:
                 pass
         
         progress.empty()

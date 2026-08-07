@@ -466,7 +466,7 @@ def _render_correlation():
                     df = yf.Ticker(sym).history(period=period, interval="1d")
                     if not df.empty:
                         rdf[sym] = df["Close"].pct_change()
-                except:
+                except Exception:
                     pass
         if rdf.empty or len(rdf.columns) < 2:
             st.error("Not enough data.")
@@ -565,7 +565,7 @@ def _render_var():
         symbols = [s.strip() for s in syms.split(",") if s.strip()]
         try:
             weights = [float(w.strip()) for w in weights_text.split(",")]
-        except:
+        except Exception:
             st.error("Invalid weights.")
             return
         if len(symbols) != len(weights):
@@ -579,7 +579,7 @@ def _render_var():
                     df = yf.Ticker(sym).history(period=period, interval="1d")
                     if not df.empty:
                         rdf[sym] = df["Close"].pct_change()
-                except:
+                except Exception:
                     pass
         if rdf.empty:
             st.error("No data.")
@@ -654,7 +654,7 @@ def _render_screener_quant():
         results = []
         prog = st.progress(0)
         for i, sym in enumerate(symbols):
-            prog.progress((i + 1) / len(symbols))
+            prog.progress((i + 1) / max(len(symbols), 1))
             try:
                 df = yf.Ticker(sym).history(period="3mo", interval="1d")
                 if df.empty or len(df) < 50:
@@ -690,7 +690,7 @@ def _render_screener_quant():
                                 "MACD": "Bull" if l_macd > l_sig else "Bear",
                                 "Trend": "Up" if l_sma20 > l_sma50 else "Down",
                                 "Signal": action, "Score": bull})
-            except:
+            except Exception:
                 pass
         prog.empty()
 

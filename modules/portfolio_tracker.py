@@ -33,11 +33,11 @@ def _get_live_price(sym):
         try:
             r = requests.get("https://api.coingecko.com/api/v3/simple/price", params={"ids": GECKO_IDS[sym_up], "vs_currencies":"usd"}, timeout=8)
             return r.json()[GECKO_IDS[sym_up]]["usd"]
-        except: return None
+        except Exception: return None
     try:
         h = yf.Ticker(sym).history(period="1d")
         return float(h["Close"].iloc[-1]) if not h.empty else None
-    except: return None
+    except Exception: return None
 
 def _fmt_price(p):
     if p < 0.0001: return f"${p:.8f}"

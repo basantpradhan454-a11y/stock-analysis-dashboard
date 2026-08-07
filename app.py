@@ -626,7 +626,7 @@ def run_backtest(df, initial_cash=100000.0, qty_per_trade=10):
         if t["action"] == "BUY":
             buy_stack.append(t["price"])
         elif t["action"] == "SELL" and buy_stack:
-            avg_buy = sum(buy_stack) / len(buy_stack)
+            avg_buy = sum(buy_stack) / max(len(buy_stack), 1)
             if t["price"] > avg_buy:
                 wins += 1
             buy_stack = []

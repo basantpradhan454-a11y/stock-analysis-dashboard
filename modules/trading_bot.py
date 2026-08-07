@@ -76,7 +76,7 @@ def _get_broker_status(broker_key):
 
 def _try_secret(name):
     try: return st.secrets.get(name, "")
-    except: return ""
+    except Exception: return ""
 
 def _place_order_simulated(ticker, side, qty, price, broker="Sandbox"):
     """Sandbox order - no real execution."""

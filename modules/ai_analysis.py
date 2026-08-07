@@ -170,7 +170,7 @@ def _returns_stats(returns):
 # ── NEW: Simple Random Forest (pure numpy decision trees) ──
 def _gini(y):
     if len(y) == 0: return 0
-    probs = np.bincount(y, minlength=2) / len(y)
+    probs = np.bincount(y, minlength=2) / max(len(y), 1)
     return 1 - np.sum(probs ** 2)
 
 def _best_split(X, y, feature_indices, n_candidates=10):
@@ -242,7 +242,7 @@ def _predict_random_forest(trees, X):
     preds = np.zeros((len(X), 2))
     for tree in trees:
         preds += _predict_tree(tree, X)
-    return preds / len(trees)
+    return preds / max(len(trees), 1)
 
 def _random_forest_importance(trees, n_features):
     """Compute feature importance from the random forest."""
