@@ -265,7 +265,13 @@ def _render_overview():
     fig.update_layout(height=240, margin=dict(l=0, r=0, t=10, b=0),
                       paper_bgcolor="#151b23", plot_bgcolor="#151b23",
                       font=dict(color="#e6edf3"), xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
-    st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+    st.plotly_chart(fig, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
     # Drawdown
     st.markdown("#### Drawdown")
@@ -274,7 +280,13 @@ def _render_overview():
     fig2.update_layout(height=170, margin=dict(l=0, r=0, t=10, b=0),
                        paper_bgcolor="#151b23", plot_bgcolor="#151b23",
                        font=dict(color="#e6edf3"), xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
-    st.plotly_chart(fig2, use_container_width=True, config={"displaylogo": False})
+    st.plotly_chart(fig2, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -336,7 +348,13 @@ def _render_backtest():
         fig.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0),
                           paper_bgcolor="#151b23", plot_bgcolor="#151b23",
                           font=dict(color="#e6edf3"), xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
-        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+        st.plotly_chart(fig, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
         if trades:
             st.markdown("#### Trade History")
@@ -443,7 +461,13 @@ def _render_optionpricer():
     fig.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="Spot at Expiry", yaxis_title="P&L",
                       paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
                       xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
-    st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+    st.plotly_chart(fig, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -475,7 +499,13 @@ def _render_correlation():
         fig = go.Figure(go.Heatmap(z=corr.values, x=corr.columns, y=corr.columns, colorscale="RdYlGn", zmid=0, zmin=-1, zmax=1,
                                    text=corr.values.round(2), texttemplate="%{text}", textfont=dict(size=10)))
         fig.update_layout(height=450, margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor="#151b23", font=dict(color="#e6edf3"))
-        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+        st.plotly_chart(fig, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -532,7 +562,13 @@ def _render_montecarlo():
         fig.update_layout(height=400, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="Days", yaxis_title="Price",
                           paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
                           xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
-        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+        st.plotly_chart(fig, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -630,7 +666,13 @@ def _render_factor():
         fig.update_layout(height=400, margin=dict(l=0, r=0, t=10, b=0), xaxis=dict(range=[-1, 1], gridcolor="#2a3441"),
                           paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
                           yaxis=dict(gridcolor="#2a3441"))
-        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+        st.plotly_chart(fig, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
     pos = sum(1 for v in vals if v > 0)
     neg = sum(1 for v in vals if v < 0)
@@ -744,7 +786,13 @@ def _render_positions():
     fig.update_layout(height=250, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="Symbol", yaxis_title="P&L",
                       paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
                       xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
-    st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+    st.plotly_chart(fig, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -779,14 +827,26 @@ def _render_pnlcal():
     fig.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="Date", yaxis_title="Daily P&L",
                       paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
                       xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
-    st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+    st.plotly_chart(fig, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
     fig2 = go.Figure(go.Scatter(x=dates, y=cum_pnl, line=dict(color="#3b82f6", width=2), fill="tozeroy", fillcolor="rgba(59,130,246,0.1)"))
     fig2.add_hline(y=0, line=dict(color="#8b949e", width=1, dash="dash"))
     fig2.update_layout(height=250, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="Date", yaxis_title="Cumulative P&L",
                        paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
                        xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
-    st.plotly_chart(fig2, use_container_width=True, config={"displaylogo": False})
+    st.plotly_chart(fig2, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
 
 # ═══════════════════════════════════════════════════════════════════════════

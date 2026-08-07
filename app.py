@@ -851,8 +851,6 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         line_width=2,
         # Narrow whiskers to emphasize body
         whiskerwidth=0.3,
-        # Make sure body is visible even for small candles
-        selector=dict(type="candlestick"),
     ), row=1, col=1)
 
     # Ensure minimum candle width (TradingView style: visible bodies)
@@ -867,7 +865,7 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
                                  line=dict(color="#2962ff", width=1.8)), row=1, col=1)
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["sma50"], name="SMA 50",
                                  line=dict(color="#ff9800", width=1.8)), row=1, col=1)
-        if analysis.get("sma200"):
+        if analysis.get("last_sma200") is not None:
             fig.add_trace(go.Scatter(x=df["date"], y=analysis["sma200"], name="SMA 200",
                                      line=dict(color="#9c27b0", width=1.8)), row=1, col=1)
 
@@ -930,8 +928,8 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         hovermode="x unified",
         dragmode="zoom",
         # TradingView-like crosshair
-        xaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikelength=8, spikecolor="rgba(150,150,150,0.4)"),
-        yaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikelength=8, spikecolor="rgba(150,150,150,0.4)"),
+        xaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across", spikecolor="rgba(150,150,150,0.4)"),
+        yaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across", spikecolor="rgba(150,150,150,0.4)"),
     )
     # TradingView-like axis styling
     fig.update_xaxes(showgrid=False, showline=True, linecolor=grid_color, mirror=True)
@@ -1274,7 +1272,13 @@ else:
 
         st.caption(f"{bt['total_trades']} total trades simulated. Initial cash: \u20b9{bt['initial_cash']:,.0f}. Historical simulation, not a guarantee of future results.")
 
-        st.plotly_chart(equity_curve_chart(bt["equity_curve"], theme), use_container_width=True)
+        st.plotly_chart(equity_curve_chart(bt["equity_curve"], theme), use_container_width=True, config={
+            "scrollZoom": True,
+            "displayModeBar": True,
+            "displaylogo": False,
+            "responsive": True,
+            "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+        })
 
         if bt["trades"]:
             st.markdown("##### Last 20 Trades")

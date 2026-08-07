@@ -177,7 +177,10 @@ def render_backtester():
         bh = (result["equity_df"]["Price"] / float(result["equity_df"]["Price"].iloc[0])) * result["initial"]
         fig.add_trace(go.Scatter(x=eq_df.index, y=bh, name="Buy & Hold", line=dict(color="#4a9eff", width=1.5, dash="dot")))
         fig.update_layout(height=380, margin=dict(l=0,r=0,t=10,b=0), hovermode="x unified")
-        st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displayModeBar": True, "displaylogo": False})
+        st.plotly_chart(fig, use_container_width=True, config={
+            "scrollZoom": True, "displayModeBar": True, "displaylogo": False,
+            "responsive": True, "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+        })
 
     with tab_tr:
         trades_df = result["trades_df"]

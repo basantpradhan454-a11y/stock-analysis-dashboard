@@ -494,7 +494,13 @@ def _render_monte_carlo(df, sym=""):
         font=dict(size=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
     fig.update_yaxes(side="right", tickformat=".2f"); fig.update_xaxes(showgrid=False)
     fig.update_yaxes(showgrid=True, gridcolor="rgba(50,50,50,0.2)")
-    st.plotly_chart(fig, use_container_width=True, config={"scrollZoom": True, "displaylogo": False, "modeBarButtonsToRemove": ["select2d", "lasso2d"]})
+    st.plotly_chart(fig, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
 
 # ═══ 4. ML PREDICTION (Logistic Regression + Random Forest) ═══
@@ -596,7 +602,13 @@ def _render_ml_prediction(df, sym=""):
         xaxis2=dict(title="RF Importance", domain=[0.55, 1]),
         yaxis2=dict(overlaying="y", side="right"),
     )
-    st.plotly_chart(fig_imp, use_container_width=True, config={"displaylogo": False})
+    st.plotly_chart(fig_imp, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
     st.caption("\u26a0\ufe0f ML predictions are based on historical patterns. NOT financial advice. Use for education only.")
 
@@ -718,7 +730,13 @@ def _run_ai_strategy_backtest(df, sym, strategy_name, risk_rules):
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Date", yaxis_title="Equity (\u20b9)")
         fig.update_yaxes(side="right", tickformat=",.0f"); fig.update_xaxes(showgrid=False)
         fig.update_yaxes(showgrid=True, gridcolor="rgba(50,50,50,0.2)")
-        st.plotly_chart(fig, use_container_width=True, config={"displaylogo": False})
+        st.plotly_chart(fig, use_container_width=True, config={
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "responsive": True,
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+    })
 
 
 # ═══ MAIN RENDER ═══

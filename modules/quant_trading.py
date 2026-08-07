@@ -76,6 +76,15 @@ def _next_price(algo, last, t, rng):
         return last + noise * 1.2
 
 
+def _hex_to_rgba(hex_color, alpha=0.1):
+    """Convert a #RRGGBB hex string to a valid rgba(...) string for Plotly."""
+    h = hex_color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
+
+
 def _render_equity_chart(data, chart_color, name):
     """Render an equity curve chart with Plotly."""
     fig = go.Figure()
@@ -85,7 +94,7 @@ def _render_equity_chart(data, chart_color, name):
         name=name,
         line=dict(color=chart_color, width=2),
         fill="tozeroy",
-        fillcolor=chart_color.replace(")", ", 0.06)").replace("rgb", "rgba") if "rgb" in chart_color else chart_color + "08",
+        fillcolor=_hex_to_rgba(chart_color, 0.10),
     ))
     fig.update_layout(
         template="plotly_dark",
@@ -182,7 +191,6 @@ def render_quant_trading():
                 st.session_state[code_key] = cat["placeholder"]
             st.text_area(
                 "Strategy Code",
-                value=st.session_state[code_key],
                 key=code_key,
                 height=70,
                 label_visibility="collapsed",
