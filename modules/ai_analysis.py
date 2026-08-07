@@ -503,78 +503,85 @@ def _render_full_analysis(df, sym=""):
         for msg in cross_msgs:
             st.markdown(f"- {msg}")
 
-    st.markdown(f"#### \U0001f4ca {sym} \u2014 Technical Analysis Chart")
-    fig = make_subplots(rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.04,
-        row_heights=[0.48, 0.15, 0.17, 0.16],
-        subplot_titles=("Price + SMA + BB + Fibonacci + Entry/Exit", "Volume + OBV", "RSI + MACD", "Stochastic (14,3)"))
-    fig.add_trace(go.Candlestick(x=df["date"], open=df["open"], high=df["high"], low=df["low"], close=df["close"],
-        name="OHLC", increasing_line_color="#26a69a", decreasing_line_color="#ef5350",
-        increasing_fillcolor="#26a69a", decreasing_fillcolor="#ef5350", line_width=2, whiskerwidth=0.3), row=1, col=1)
-    if entry_exit_points:
-        entries = [p for p in entry_exit_points if p["type"] == "entry"]
-        exits = [p for p in entry_exit_points if p["type"] == "exit"]
-        if entries:
-            fig.add_trace(go.Scatter(
-                x=[p["date"] for p in entries], y=[p["price"] * 0.985 for p in entries],
-                mode="markers+text", text=["BUY"] * len(entries), textposition="bottom center",
-                textfont=dict(size=9, color="#26a69a", family="Trebuchet MS, sans-serif"),
-                marker=dict(symbol="triangle-up", size=11, color="#26a69a", line=dict(color="#0d3b30", width=1)),
-                name="Entry (BUY)", hovertext=[f"BUY @ {p['price']:.2f}" for p in entries], hoverinfo="text",
-            ), row=1, col=1)
-        if exits:
-            fig.add_trace(go.Scatter(
-                x=[p["date"] for p in exits], y=[p["price"] * 1.015 for p in exits],
-                mode="markers+text", text=["SELL"] * len(exits), textposition="top center",
-                textfont=dict(size=9, color="#ef5350", family="Trebuchet MS, sans-serif"),
-                marker=dict(symbol="triangle-down", size=11, color="#ef5350", line=dict(color="#4a1414", width=1)),
-                name="Exit (SELL)", hovertext=[f"SELL @ {p['price']:.2f}" for p in exits], hoverinfo="text",
-            ), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=sma50, name="SMA 50", line=dict(color="#2962ff", width=1.5)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=sma200, name="SMA 200", line=dict(color="#ff9800", width=1.5)), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=ema20, name="EMA 20", line=dict(color="#e91e63", width=1.2), opacity=0.7), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=bb_u, name="BB Upper", line=dict(color="#9575cd", width=1, dash="dot"), opacity=0.5, showlegend=False), row=1, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=bb_l, name="BB Lower", line=dict(color="#9575cd", width=1, dash="dot"), opacity=0.5, showlegend=False), row=1, col=1)
-    colors_fib = ["#ef5350", "#ff9800", "#26a69a", "#2962ff", "#ab47bc", "#26a69a"]
-    for i, (label, val) in enumerate(fib.items()):
-        fig.add_hline(y=val, line_dash="dash", line_color=colors_fib[i], opacity=0.4, line_width=1, row=1, col=1,
-            annotation_text=f"Fib {label}: {val:.2f}", annotation_position="top left", annotation_font_size=8, annotation_font_color=colors_fib[i])
-    for r in res_levels[-3:]:
-        fig.add_hline(y=r, line_dash="solid", line_color="#ef5350", line_width=1.5, opacity=0.7, row=1, col=1,
-            annotation_text=f"R: {r}", annotation_position="top right", annotation_font_size=9, annotation_font_color="#ef5350")
-    for s in sup_levels[-3:]:
-        fig.add_hline(y=s, line_dash="solid", line_color="#26a69a", line_width=1.5, opacity=0.7, row=1, col=1,
-            annotation_text=f"S: {s}", annotation_position="bottom right", annotation_font_size=9, annotation_font_color="#26a69a")
-    vol_colors = ["#26a69a" if c >= o else "#ef5350" for c, o in zip(df["close"], df["open"])]
-    fig.add_trace(go.Bar(x=df["date"], y=vol, name="Volume", marker_color=vol_colors, opacity=0.5), row=2, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=obv, name="OBV", line=dict(color="#ab47bc", width=1.5)), row=2, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=rsi, name="RSI", line=dict(color="#7e57c2", width=1.8)), row=3, col=1)
-    fig.add_hline(y=70, line_dash="dot", line_color="#ef5350", opacity=0.5, row=3, col=1)
-    fig.add_hline(y=30, line_dash="dot", line_color="#26a69a", opacity=0.5, row=3, col=1)
-    fig.add_hline(y=50, line_dash="dash", line_color="#78909c", opacity=0.3, row=3, col=1)
-    fig.add_trace(go.Bar(x=df["date"], y=macd_hist, name="MACD Hist",
-        marker_color=["#26a69a" if h >= 0 else "#ef5350" for h in macd_hist], opacity=0.5), row=3, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=macd, name="MACD", line=dict(color="#2962ff", width=1.5)), row=3, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=macd_sig, name="Signal", line=dict(color="#ff9800", width=1.5)), row=3, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=stoch_k, name="%K", line=dict(color="#2962ff", width=1.5)), row=4, col=1)
-    fig.add_trace(go.Scatter(x=df["date"], y=stoch_d, name="%D", line=dict(color="#ff9800", width=1.5)), row=4, col=1)
-    fig.add_hline(y=80, line_dash="dot", line_color="#ef5350", opacity=0.5, row=4, col=1)
-    fig.add_hline(y=20, line_dash="dot", line_color="#26a69a", opacity=0.5, row=4, col=1)
+    try:
+        st.markdown(f"#### \U0001f4ca {sym} \u2014 Technical Analysis Chart")
+        fig = make_subplots(rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.04,
+            row_heights=[0.48, 0.15, 0.17, 0.16],
+            subplot_titles=("Price + SMA + BB + Fibonacci + Entry/Exit", "Volume + OBV", "RSI + MACD", "Stochastic (14,3)"))
+        fig.add_trace(go.Candlestick(x=df["date"], open=df["open"], high=df["high"], low=df["low"], close=df["close"],
+            name="OHLC", increasing_line_color="#26a69a", decreasing_line_color="#ef5350",
+            increasing_fillcolor="#26a69a", decreasing_fillcolor="#ef5350", line_width=2, whiskerwidth=0.3), row=1, col=1)
+        if entry_exit_points:
+            entries = [p for p in entry_exit_points if p["type"] == "entry"]
+            exits = [p for p in entry_exit_points if p["type"] == "exit"]
+            if entries:
+                fig.add_trace(go.Scatter(
+                    x=[p["date"] for p in entries], y=[p["price"] * 0.985 for p in entries],
+                    mode="markers+text", text=["BUY"] * len(entries), textposition="bottom center",
+                    textfont=dict(size=9, color="#26a69a", family="Trebuchet MS, sans-serif"),
+                    marker=dict(symbol="triangle-up", size=11, color="#26a69a", line=dict(color="#0d3b30", width=1)),
+                    name="Entry (BUY)", hovertext=[f"BUY @ {p['price']:.2f}" for p in entries], hoverinfo="text",
+                ), row=1, col=1)
+            if exits:
+                fig.add_trace(go.Scatter(
+                    x=[p["date"] for p in exits], y=[p["price"] * 1.015 for p in exits],
+                    mode="markers+text", text=["SELL"] * len(exits), textposition="top center",
+                    textfont=dict(size=9, color="#ef5350", family="Trebuchet MS, sans-serif"),
+                    marker=dict(symbol="triangle-down", size=11, color="#ef5350", line=dict(color="#4a1414", width=1)),
+                    name="Exit (SELL)", hovertext=[f"SELL @ {p['price']:.2f}" for p in exits], hoverinfo="text",
+                ), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=sma50, name="SMA 50", line=dict(color="#2962ff", width=1.5)), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=sma200, name="SMA 200", line=dict(color="#ff9800", width=1.5)), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=ema20, name="EMA 20", line=dict(color="#e91e63", width=1.2), opacity=0.7), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=bb_u, name="BB Upper", line=dict(color="#9575cd", width=1, dash="dot"), opacity=0.5, showlegend=False), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=bb_l, name="BB Lower", line=dict(color="#9575cd", width=1, dash="dot"), opacity=0.5, showlegend=False), row=1, col=1)
+        colors_fib = ["#ef5350", "#ff9800", "#26a69a", "#2962ff", "#ab47bc", "#26a69a"]
+        for i, (label, val) in enumerate(fib.items()):
+            fig.add_hline(y=val, line_dash="dash", line_color=colors_fib[i], opacity=0.4, line_width=1, row=1, col=1,
+                annotation_text=f"Fib {label}: {val:.2f}", annotation_position="top left", annotation_font_size=8, annotation_font_color=colors_fib[i])
+        for r in res_levels[-3:]:
+            fig.add_hline(y=r, line_dash="solid", line_color="#ef5350", line_width=1.5, opacity=0.7, row=1, col=1,
+                annotation_text=f"R: {r}", annotation_position="top right", annotation_font_size=9, annotation_font_color="#ef5350")
+        for s in sup_levels[-3:]:
+            fig.add_hline(y=s, line_dash="solid", line_color="#26a69a", line_width=1.5, opacity=0.7, row=1, col=1,
+                annotation_text=f"S: {s}", annotation_position="bottom right", annotation_font_size=9, annotation_font_color="#26a69a")
+        vol_colors = ["#26a69a" if c >= o else "#ef5350" for c, o in zip(df["close"], df["open"])]
+        fig.add_trace(go.Bar(x=df["date"], y=vol, name="Volume", marker_color=vol_colors, opacity=0.5), row=2, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=obv, name="OBV", line=dict(color="#ab47bc", width=1.5)), row=2, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=rsi, name="RSI", line=dict(color="#7e57c2", width=1.8)), row=3, col=1)
+        fig.add_hline(y=70, line_dash="dot", line_color="#ef5350", opacity=0.5, row=3, col=1)
+        fig.add_hline(y=30, line_dash="dot", line_color="#26a69a", opacity=0.5, row=3, col=1)
+        fig.add_hline(y=50, line_dash="dash", line_color="#78909c", opacity=0.3, row=3, col=1)
+        fig.add_trace(go.Bar(x=df["date"], y=macd_hist, name="MACD Hist",
+            marker_color=["#26a69a" if h >= 0 else "#ef5350" for h in macd_hist], opacity=0.5), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=macd, name="MACD", line=dict(color="#2962ff", width=1.5)), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=macd_sig, name="Signal", line=dict(color="#ff9800", width=1.5)), row=3, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=stoch_k, name="%K", line=dict(color="#2962ff", width=1.5)), row=4, col=1)
+        fig.add_trace(go.Scatter(x=df["date"], y=stoch_d, name="%D", line=dict(color="#ff9800", width=1.5)), row=4, col=1)
+        fig.add_hline(y=80, line_dash="dot", line_color="#ef5350", opacity=0.5, row=4, col=1)
+        fig.add_hline(y=20, line_dash="dot", line_color="#26a69a", opacity=0.5, row=4, col=1)
 
-    fig.update_layout(template="plotly_dark", height=820, margin=dict(l=50, r=60, t=40, b=30),
-        xaxis_rangeslider_visible=False, showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        font=dict(size=10, family="Trebuchet MS, sans-serif"),
-        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        hovermode="x unified",
-        # TradingView-style zoom: drag to pan, scroll wheel to zoom (no click-drag box zoom)
-        dragmode="pan")
-    fig.update_xaxes(showgrid=False, showline=True, linecolor="rgba(50,50,50,0.3)")
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="rgba(50,50,50,0.2)", side="right", showline=True, linecolor="rgba(50,50,50,0.3)")
-    fig.update_yaxes(tickformat=".2f", row=1, col=1)
-    fig.update_yaxes(range=[0, 100], row=4, col=1)
-    st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "displayModeBar": True, "displaylogo": False, "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
+        fig.update_layout(template="plotly_dark", height=820, margin=dict(l=50, r=60, t=40, b=30),
+            xaxis_rangeslider_visible=False, showlegend=True,
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+            font=dict(size=10, family="Trebuchet MS, sans-serif"),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            hovermode="x unified",
+            # TradingView-style zoom: drag to pan, scroll wheel to zoom (no click-drag box zoom)
+            dragmode="pan")
+        fig.update_xaxes(showgrid=False, showline=True, linecolor="rgba(50,50,50,0.3)")
+        fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="rgba(50,50,50,0.2)", side="right", showline=True, linecolor="rgba(50,50,50,0.3)")
+        fig.update_yaxes(tickformat=".2f", row=1, col=1)
+        fig.update_yaxes(range=[0, 100], row=4, col=1)
+        st.plotly_chart(fig, use_container_width=True, config={
+            "scrollZoom": True, "displayModeBar": True, "displaylogo": False, "responsive": True,
+            "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
+
+    except Exception as chart_err:
+        st.error(f"Chart error: {type(chart_err).__name__}: {chart_err}")
+        import traceback as _tb
+        st.text(_tb.format_exc())
+        return
 
     # ── NEW: Composite Signal Score gauge + breakdown ──
     st.markdown("#### \U0001f3af Composite Signal Score")
