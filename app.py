@@ -148,12 +148,12 @@ if active_tab != "Dashboard":
     st.stop()
 
 BROKERS = [
-    {"id": "zerodha",  "name": "Zerodha Kite", "note": "Kite Connect API",       "fields": ["API Key", "API Secret"]},
-    {"id": "groww",    "name": "Groww",        "note": "Groww API (Official)",  "fields": ["API Key", "API Secret", "Client Code"]},
-    {"id": "upstox",   "name": "Upstox",      "note": "Upstox API v2",          "fields": ["API Key", "API Secret", "Redirect URI"]},
-    {"id": "angelone", "name": "Angel One",   "note": "SmartAPI",               "fields": ["API Key", "Client ID", "PIN"]},
-    {"id": "fyers",    "name": "Fyers",        "note": "Fyers API v3",          "fields": ["App ID", "Secret Key"]},
-    {"id": "generic",  "name": "Any broker",   "note": "Custom REST / WebSocket", "fields": ["Base URL", "API Key"]},
+    {"id": "zerodha",  "name": "Zerodha Kite", "note": "Kite Connect API",       "fields": ["API Key", "API Secret"], "color": "#387ed1", "logo": "⚡"},
+    {"id": "groww",    "name": "Groww",        "note": "Groww Official API",  "fields": ["API Key", "API Secret", "Client Code", "TOTP Secret"], "color": "#00d09c", "logo": "🌱"},
+    {"id": "upstox",   "name": "Upstox",      "note": "Upstox API v2",          "fields": ["API Key", "API Secret", "Redirect URI"], "color": "#562ac8", "logo": "💥"},
+    {"id": "angelone", "name": "Angel One",   "note": "SmartAPI",               "fields": ["API Key", "Client ID", "PIN"], "color": "#f47216", "logo": "💡"},
+    {"id": "fyers",    "name": "Fyers",        "note": "Fyers API v3",          "fields": ["App ID", "Secret Key"], "color": "#00baf2", "logo": "🔥"},
+    {"id": "generic",  "name": "Any broker",   "note": "Custom REST / WebSocket", "fields": ["Base URL", "API Key"], "color": "#888", "logo": "🔗"},
 ]
 
 # ──────────────────────────────────────────────
@@ -990,19 +990,35 @@ if theme_col2.button("\u2600\ufe0f Light", use_container_width=True,
 st.sidebar.markdown("---")
 
 # ── Broker Connection Panel ──
-st.sidebar.markdown("### \U0001f517 Broker Connection")
+st.sidebar.markdown("### 🔗 Broker Connection")
+
+# Quick connect to Groww (prominent banner when not connected)
+if not st.session_state.connection:
+    st.sidebar.markdown("""
+    <div style='padding:10px 14px;border-radius:10px;background:linear-gradient(135deg,#00d09c22,#00b37f22);
+    border:1.5px solid #00d09c66;margin-bottom:10px;'>
+        <div style='display:flex;align-items:center;gap:8px;'>
+            <span style='font-size:20px;'>🌱</span>
+            <span style='font-size:14px;font-weight:700;color:#00d09c;'>Groww Quick Connect</span>
+        </div>
+        <div style='font-size:11px;opacity:0.6;margin-top:4px;'>Select Groww below to connect instantly</div>
+    </div>
+    """, unsafe_allow_html=True)
 
 if st.session_state.connection:
     conn = st.session_state.connection
-    mode_label = "\U0001f7e2 Live" if conn.get("mode") == "live" else "\U0001f7e1 Demo"
+    broker_info = next((b for b in BROKERS if b["id"] == conn.get("broker_id")), {})
+    broker_color = broker_info.get("color", "#00d09c")
+    broker_logo = broker_info.get("logo", "🔗")
+    mode_label = "🟢 Live" if conn.get("mode") == "live" else "🟡 Demo"
     st.sidebar.markdown(f"""
-    <div style='padding:10px 14px; border-radius:8px; background:{"#1a3d1a" if theme=="dark" else "#d4edda"};
-    border:1px solid {"#2a5a2a" if theme=="dark" else "#c3e6cb"};'>
-        <div style='font-weight:700;font-size:13px;'>{conn["name"]} {mode_label}</div>
+    <div style='padding:10px 14px; border-radius:8px; background:{broker_color}22;
+    border:1px solid {broker_color}66;'>
+        <div style='font-weight:700;font-size:13px;'>{broker_logo} {conn["name"]} {mode_label}</div>
         <div style='font-size:11px;opacity:0.7;margin-top:2px;'>Connected {conn["connected_at"]}</div>
     </div>
     """, unsafe_allow_html=True)
-    if st.sidebar.button("\U0001f50c Disconnect", use_container_width=True):
+    if st.sidebar.button("🔌 Disconnect", use_container_width=True):
         st.session_state.connection = None
         st.session_state.credentials = {}
         st.rerun()
@@ -1014,32 +1030,53 @@ else:
         key="broker_select"
     )
     broker_meta = next(b for b in BROKERS if b["id"] == selected_broker_id)
-    st.sidebar.caption(f"\U0001f4cb {broker_meta['note']}")
+    broker_color = broker_meta.get("color", "#888")
+    broker_logo = broker_meta.get("logo", "🔗")
+
+    # Branded broker info card
+    st.sidebar.markdown(f"""
+    <div style='padding:6px 10px;border-radius:6px;background:{broker_color}11;border:1px solid {broker_color}44;margin:4px 0;'>
+        <span style='font-size:14px;'>{broker_logo}</span>
+        <span style='font-size:11px;color:{broker_color};margin-left:6px;font-weight:600;'>{broker_meta['note']}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Groww-specific hint
+    if selected_broker_id == "groww":
+        st.sidebar.markdown("""
+        <div style='padding:8px;border-radius:8px;background:#00d09c11;border:1px dashed #00d09c44;margin:6px 0 10px 0;text-align:center;'>
+            <div style='font-size:11px;color:#00d09c;'>🌱 Enter your Groww API credentials below</div>
+            <div style='font-size:10px;opacity:0.5;margin-top:2px;'>Get API keys from Groww Dashboard → Settings → API</div>
+        </div>
+        """, unsafe_allow_html=True)
 
     credentials = {}
     for field in broker_meta["fields"]:
-        is_secret = "secret" in field.lower() or "pin" in field.lower() or "key" in field.lower()
+        is_secret = "secret" in field.lower() or "pin" in field.lower() or "key" in field.lower() or "totp" in field.lower()
         credentials[field] = st.sidebar.text_input(
             field, type="password" if is_secret else "default",
             key=f"cred_{selected_broker_id}_{field}"
         )
 
-    if st.sidebar.button("\U0001f517 Connect", use_container_width=True, type="primary"):
-        st.session_state.connection = {
-            "broker_id": selected_broker_id,
-            "name": broker_meta["name"],
-            "connected_at": time.strftime("%H:%M:%S"),
-            "mode": "demo",
-        }
-        st.session_state.credentials = credentials
-        st.sidebar.success(f"\u2705 Connected to {broker_meta['name']} (Demo)")
-        st.rerun()
+    btn_label = f"Connect to {broker_meta['name']}"
+    if st.sidebar.button(btn_label, use_container_width=True, type="primary"):
+        empty_fields = [f for f in broker_meta["fields"] if not credentials.get(f)]
+        if empty_fields:
+            st.sidebar.error(f"⚠️ Please fill: {', '.join(empty_fields)}")
+        else:
+            st.session_state.connection = {
+                "broker_id": selected_broker_id,
+                "name": broker_meta["name"],
+                "connected_at": time.strftime("%H:%M:%S"),
+                "mode": "demo",
+            }
+            st.session_state.credentials = credentials
+            st.sidebar.success(f"✅ Connected to {broker_meta['name']} (Demo)")
+            st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.caption("\U0001f4ca Quant Desk \u2014 Real data via yfinance. Not financial advice.")
+st.sidebar.caption("📊 Quant Desk — Real data via yfinance. Not financial advice.")
 
-# ──────────────────────────────────────────────
-# WATCHLIST SCREEN
 # ──────────────────────────────────────────────
 
 if st.session_state.selected_asset is None:
