@@ -149,6 +149,7 @@ if active_tab != "Dashboard":
 
 BROKERS = [
     {"id": "zerodha",  "name": "Zerodha Kite", "note": "Kite Connect API",       "fields": ["API Key", "API Secret"]},
+    {"id": "groww",    "name": "Groww",        "note": "Groww API (Official)",  "fields": ["API Key", "API Secret", "Client Code"]},
     {"id": "upstox",   "name": "Upstox",      "note": "Upstox API v2",          "fields": ["API Key", "API Secret", "Redirect URI"]},
     {"id": "angelone", "name": "Angel One",   "note": "SmartAPI",               "fields": ["API Key", "Client ID", "PIN"]},
     {"id": "fyers",    "name": "Fyers",        "note": "Fyers API v3",          "fields": ["App ID", "Secret Key"]},
