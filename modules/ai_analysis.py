@@ -237,17 +237,23 @@ def _var(returns, conf=0.95):
 
 
 # ── NEW: Golden/Death Cross detection ──
-def _golden_death_cross(sma50, sma200):
+def _golden_death_cross(sma50, sma200, dates=None):
     """Detect Golden Cross (SMA50 crosses above SMA200) and Death Cross (below)."""
     signals = pd.Series(0, index=sma50.index)
     golden = (sma50 > sma200) & (sma50.shift(1) <= sma200.shift(1))
     death = (sma50 < sma200) & (sma50.shift(1) >= sma200.shift(1))
     signals[golden] = 1
     signals[death] = -1
-    # Find recent crosses
-    golden_dates = sma50.index[golden.fillna(False)]
-    death_dates = sma50.index[death.fillna(False)]
-    return signals, list(golden_dates[-3:]), list(death_dates[-3:])
+    # Find recent crosses — map integer indices to actual dates if provided
+    golden_idx = sma50.index[golden.fillna(False)]
+    death_idx = sma50.index[death.fillna(False)]
+    if dates is not None:
+        golden_dates = [dates.iloc[int(i)] if isinstance(i, (int, np.integer)) else pd.Timestamp(i) for i in golden_idx[-3:]]
+        death_dates = [dates.iloc[int(i)] if isinstance(i, (int, np.integer)) else pd.Timestamp(i) for i in death_idx[-3:]]
+    else:
+        golden_dates = [pd.Timestamp(i) for i in golden_idx[-3:]]
+        death_dates = [pd.Timestamp(i) for i in death_idx[-3:]]
+    return signals, golden_dates, death_dates
 
 
 # ── NEW: Candlestick pattern detection ──
@@ -465,7 +471,7 @@ def _render_full_analysis(df, sym=""):
     obv = _obv(close, vol); fib = _fibonacci_levels(df)
     sup_levels, res_levels = _find_support_resistance(df)
     # NEW: Golden/Death Cross + Candlestick patterns
-    cross_signals, golden_dates, death_dates = _golden_death_cross(sma50, sma200)
+    cross_signals, golden_dates, death_dates = _golden_death_cross(sma50, sma200, df["date"])
     candle_patterns = _detect_candlestick_patterns(df)
     # NEW: Stochastic oscillator + composite signal score + entry/exit markers
     stoch_k, stoch_d = _stochastic(high, low, close)
@@ -693,7 +699,8 @@ def _render_monte_carlo(df, sym=""):
     fig.update_layout(template="plotly_dark", height=450, margin=dict(l=50, r=60, t=30, b=30),
         xaxis_title="Days Ahead", yaxis_title="Price (\u20b9)", showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        font=dict(size=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+        font=dict(size=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        dragmode="pan")
     fig.update_yaxes(side="right", tickformat=".2f"); fig.update_xaxes(showgrid=False)
     fig.update_yaxes(showgrid=True, gridcolor="rgba(50,50,50,0.2)")
     st.plotly_chart(fig, use_container_width=True, config={
@@ -929,7 +936,8 @@ def _run_ai_strategy_backtest(df, sym, strategy_name, risk_rules):
         fig = go.Figure(); fig.add_trace(go.Scatter(x=df["date"], y=equity, name="Equity",
             line=dict(color="#26a69a", width=2), fill="tozeroy", fillcolor="rgba(38,166,154,0.05)"))
         fig.update_layout(template="plotly_dark", height=300, margin=dict(l=50, r=50, t=20, b=20),
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Date", yaxis_title="Equity (\u20b9)")
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Date", yaxis_title="Equity (\u20b9)",
+            dragmode="pan")
         fig.update_yaxes(side="right", tickformat=",.0f"); fig.update_xaxes(showgrid=False)
         fig.update_yaxes(showgrid=True, gridcolor="rgba(50,50,50,0.2)")
         st.plotly_chart(fig, use_container_width=True, config={

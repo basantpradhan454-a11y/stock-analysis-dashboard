@@ -149,7 +149,7 @@ def render_option_pricer():
     fig.add_trace(go.Scatter(x=prices, y=put_payoff, name="Put P&L", line=dict(color="#ef4444", width=2)))
     fig.add_hline(y=0, line=dict(color="#8b949e", width=1, dash="dash"))
     fig.add_vline(x=K, line=dict(color="#3b82f6", width=1, dash="dot"), name="Strike")
-    fig.update_layout(height=350, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Spot at Expiry", yaxis_title="P&L")
+    fig.update_layout(height=350, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Spot at Expiry", yaxis_title="P&L", dragmode="pan")
     st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
         "displayModeBar": True,
@@ -193,7 +193,7 @@ def render_correlation():
             colorscale="RdYlGn", zmid=0, zmin=-1, zmax=1,
             text=corr.values.round(2), texttemplate="%{text}", textfont=dict(size=10),
         ))
-        fig.update_layout(height=450, margin=dict(l=0,r=0,t=10,b=0))
+        fig.update_layout(height=450, margin=dict(l=0,r=0,t=10,b=0), dragmode="pan")
         st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
         "displayModeBar": True,
@@ -267,7 +267,7 @@ def render_monte_carlo():
         fig.add_trace(go.Scatter(x=list(range(days+1)), y=p10_path, name=f"{confidence}% Low", line=dict(color="#ef4444", width=2)))
         fig.add_trace(go.Scatter(x=list(range(days+1)), y=p50_path, name="Median", line=dict(color="#3b82f6", width=2)))
         fig.add_trace(go.Scatter(x=list(range(days+1)), y=p90_path, name=f"{confidence}% High", line=dict(color="#22c55e", width=2)))
-        fig.update_layout(height=400, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Days", yaxis_title="Price")
+        fig.update_layout(height=400, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Days", yaxis_title="Price", dragmode="pan")
         st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
         "displayModeBar": True,
@@ -372,7 +372,7 @@ def render_factor_exposure():
         colors = ["#22c55e" if v >= 0 else "#ef4444" for v in factor_vals]
         fig = go.Figure(go.Bar(x=factor_vals, y=factors, orientation="h", marker_color=colors,
                                text=[f"{v:+.2f}" for v in factor_vals], textposition="outside"))
-        fig.update_layout(height=400, margin=dict(l=0,r=0,t=10,b=0), xaxis=dict(range=[-1, 1], gridcolor="#2a3441"),
+        fig.update_layout(height=400, margin=dict(l=0,r=0,t=10,b=0), dragmode="pan", xaxis=dict(range=[-1, 1], gridcolor="#2a3441"),
                           yaxis=dict(gridcolor="#2a3441"))
         st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
@@ -512,7 +512,7 @@ def render_pnl_calendar():
     fig = go.Figure()
     colors = ["#22c55e" if p >= 0 else "#ef4444" for p in daily_pnl]
     fig.add_trace(go.Bar(x=dates, y=daily_pnl, name="Daily P&L", marker_color=colors))
-    fig.update_layout(height=300, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Date", yaxis_title="Daily P&L")
+    fig.update_layout(height=300, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Date", yaxis_title="Daily P&L", dragmode="pan")
     st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
         "displayModeBar": True,
@@ -527,7 +527,7 @@ def render_pnl_calendar():
                               line=dict(color="#3b82f6", width=2), fill="tozeroy",
                               fillcolor="rgba(59,130,246,0.1)"))
     fig2.add_hline(y=0, line=dict(color="#8b949e", width=1, dash="dash"))
-    fig2.update_layout(height=250, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Date", yaxis_title="Cumulative P&L")
+    fig2.update_layout(height=250, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Date", yaxis_title="Cumulative P&L", dragmode="pan")
     st.plotly_chart(fig2, use_container_width=True, config={
         "scrollZoom": True,
         "displayModeBar": True,

@@ -114,7 +114,7 @@ def render_portfolio_tracker():
             c1, c2 = st.columns(2)
             with c1:
                 fig = go.Figure(go.Pie(labels=df["Symbol"], values=df["Current Val"], hole=0.45))
-                fig.update_layout(height=280, margin=dict(l=0,r=0,t=0,b=0))
+                fig.update_layout(height=280, margin=dict(l=0,r=0,t=0,b=0), dragmode="pan")
                 st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
         "displayModeBar": True,
@@ -125,7 +125,7 @@ def render_portfolio_tracker():
             with c2:
                 colors = ["#00ff88" if v>=0 else "#ff4466" for v in df["P&L ($)"]]
                 fig2 = go.Figure(go.Bar(x=df["Symbol"], y=df["P&L ($)"], marker_color=colors))
-                fig2.update_layout(height=280, margin=dict(l=0,r=0,t=10,b=0), showlegend=False)
+                fig2.update_layout(height=280, margin=dict(l=0,r=0,t=10,b=0), showlegend=False, dragmode="pan")
                 st.plotly_chart(fig2, use_container_width=True, config={
         "scrollZoom": True,
         "displayModeBar": True,

@@ -666,6 +666,7 @@ def equity_curve_chart(equity_curve, theme="dark"):
     fig.update_layout(template=template, height=280,
                       margin=dict(l=50, r=20, t=20, b=30),
                       yaxis_title="Equity", showlegend=False,
+        dragmode="pan",
                       font=dict(size=11), paper_bgcolor=bg_color, plot_bgcolor=bg_color)
     fig.update_xaxes(showgrid=False)
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="rgba(50,50,50,0.3)" if theme == "dark" else "rgba(200,200,200,0.5)")
@@ -965,6 +966,7 @@ def trend_chart(df, theme="dark"):
     fig.update_layout(template=template, height=240,
                       margin=dict(l=50, r=20, t=20, b=30),
                       yaxis_title="Cumulative %", showlegend=False,
+        dragmode="pan",
                       font=dict(size=11), paper_bgcolor=bg_color, plot_bgcolor=bg_color)
     fig.update_xaxes(showgrid=False)
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="rgba(50,50,50,0.3)" if theme == "dark" else "rgba(200,200,200,0.5)")

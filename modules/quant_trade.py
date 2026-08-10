@@ -265,6 +265,7 @@ def _render_overview():
     fig.add_trace(go.Scatter(x=MONTHS, y=BENCH_EQ, name="Benchmark", line=dict(color="#8b949e", width=2)))
     fig.update_layout(height=240, margin=dict(l=0, r=0, t=10, b=0),
                       paper_bgcolor="#151b23", plot_bgcolor="#151b23",
+        dragmode="pan",
                       font=dict(color="#e6edf3"), xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
@@ -280,6 +281,7 @@ def _render_overview():
     fig2.add_trace(go.Bar(x=MONTHS, y=DD_SERIES, name="Drawdown", marker_color="#ef4444"))
     fig2.update_layout(height=170, margin=dict(l=0, r=0, t=10, b=0),
                        paper_bgcolor="#151b23", plot_bgcolor="#151b23",
+        dragmode="pan",
                        font=dict(color="#e6edf3"), xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig2, use_container_width=True, config={
         "scrollZoom": True,
@@ -349,6 +351,7 @@ def _render_backtest():
         fig.add_trace(go.Scatter(x=df.index, y=df["Buy_hold"], name="Buy & Hold", line=dict(color="#8b949e", width=2)))
         fig.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0),
                           paper_bgcolor="#151b23", plot_bgcolor="#151b23",
+        dragmode="pan",
                           font=dict(color="#e6edf3"), xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
         st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
@@ -462,6 +465,7 @@ def _render_optionpricer():
     fig.add_vline(x=K, line=dict(color="#3b82f6", width=1, dash="dot"))
     fig.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="Spot at Expiry", yaxis_title="P&L",
                       paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
+        dragmode="pan",
                       xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
@@ -563,6 +567,7 @@ def _render_montecarlo():
         fig.add_trace(go.Scatter(x=list(range(days+1)), y=np.percentile(paths, 95, axis=0), name=f"{conf}% High", line=dict(color="#22c55e", width=2)))
         fig.update_layout(height=400, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="Days", yaxis_title="Price",
                           paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
+        dragmode="pan",
                           xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
         st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
@@ -666,6 +671,7 @@ def _render_factor():
                                text=[f"{v:+.2f}" for v in vals], textposition="outside"))
         fig.update_layout(height=400, margin=dict(l=0, r=0, t=10, b=0), xaxis=dict(range=[-1, 1], gridcolor="#2a3441"),
                           paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
+        dragmode="pan",
                           yaxis=dict(gridcolor="#2a3441"))
         st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
@@ -785,6 +791,7 @@ def _render_positions():
                            text=[f"\u20b9{p['pnl']:+,.0f}" for p in POSITIONS], textposition="outside"))
     fig.update_layout(height=250, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="Symbol", yaxis_title="P&L",
                       paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
+        dragmode="pan",
                       xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
@@ -826,6 +833,7 @@ def _render_pnlcal():
     fig = go.Figure(go.Bar(x=dates, y=daily_pnl, marker_color=["#22c55e" if p >= 0 else "#ef4444" for p in daily_pnl]))
     fig.update_layout(height=300, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="Date", yaxis_title="Daily P&L",
                       paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
+        dragmode="pan",
                       xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
@@ -839,6 +847,7 @@ def _render_pnlcal():
     fig2.add_hline(y=0, line=dict(color="#8b949e", width=1, dash="dash"))
     fig2.update_layout(height=250, margin=dict(l=0, r=0, t=10, b=0), xaxis_title="Date", yaxis_title="Cumulative P&L",
                        paper_bgcolor="#151b23", plot_bgcolor="#151b23", font=dict(color="#e6edf3"),
+        dragmode="pan",
                        xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig2, use_container_width=True, config={
         "scrollZoom": True,
