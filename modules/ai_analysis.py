@@ -463,6 +463,7 @@ def _render_photo_upload():
 
 # ═══ 2. FULL TECHNICAL + QUANT ANALYSIS ═══
 def _render_full_analysis(df, sym=""):
+    st.markdown("v3.2")
     close = df["close"]; high = df["high"]; low = df["low"]
     vol = df.get("volume", pd.Series(0, index=df.index))
     sma50 = _sma(close, 50); sma200 = _sma(close, 200); ema20 = _ema(close, 20)
