@@ -412,7 +412,7 @@ def _collect_importance(node, importance):
 
 
 @st.cache_data(ttl=300, show_spinner=False)
-def _fetch_data(sym, period="1y"):
+def _fetch_data(sym, period="5y"):
     df, is_synthetic = get_history(sym, period=period, interval="1d")
     if df is None or df.empty:
         return None
@@ -437,7 +437,7 @@ def _render_photo_upload():
             st.image(uploaded, use_container_width=True)
             sym_input = st.text_input("Symbol visible on chart (e.g. RELIANCE.NS, AAPL, BTC-USD)",
                 key="photo_chart_sym", placeholder="Type the ticker you see on the chart...")
-            period = st.selectbox("Data Period", ["6mo", "1y", "2y", "5y", "10y"], index=4, key="photo_chart_period")
+            period = st.selectbox("Data Period", ["6mo", "1y", "2y", "5y", "10y"], index=3, key="photo_chart_period")
             if st.button("\U0001f50d Load Real Chart", type="primary", key="photo_load_btn"):
                 if sym_input.strip():
                     st.session_state["photo_sym"] = sym_input.strip().upper()
@@ -547,16 +547,45 @@ def _render_full_analysis(df, sym=""):
         fig.add_trace(go.Scatter(x=df["date"], y=ema20, name="EMA 20", line=dict(color="#e91e63", width=1.2), opacity=0.7), row=1, col=1)
         fig.add_trace(go.Scatter(x=df["date"], y=bb_u, name="BB Upper", line=dict(color="#9575cd", width=1, dash="dot"), opacity=0.5, showlegend=False), row=1, col=1)
         fig.add_trace(go.Scatter(x=df["date"], y=bb_l, name="BB Lower", line=dict(color="#9575cd", width=1, dash="dot"), opacity=0.5, showlegend=False), row=1, col=1)
+        # Volume Profile (horizontal histogram on right side)
+        try:
+            _close_arr = df["close"].values
+            _vol_arr = df["volume"].values if "volume" in df.columns else vol.values if 'vol' in dir() else None
+            if _vol_arr is not None and len(_close_arr) > 20:
+                import numpy as _np
+                _n_bins = min(30, max(10, len(_close_arr) // 5))
+                _pmin, _pmax = float(_np.min(_close_arr)), float(_np.max(_close_arr))
+                _edges = _np.linspace(_pmin, _pmax, _n_bins + 1)
+                _vp = _np.zeros(_n_bins)
+                for _j in range(len(_close_arr)):
+                    _idx = min(int((_close_arr[_j] - _pmin) / (_pmax - _pmin) * _n_bins), _n_bins - 1)
+                    if _idx >= 0:
+                        _vp[_idx] += _vol_arr[_j]
+                _max_vp = _vp.max() if _vp.max() > 0 else 1
+                _x_range_ms = (df["date"].iloc[-1] - df["date"].iloc[0]).total_seconds() * 1000
+                _bar_w_ms = int(_x_range_ms * 0.12)
+                for _j in range(_n_bins):
+                    if _vp[_j] > 0:
+                        fig.add_shape(type="rect", xref="x", yref="y",
+                            x0=df["date"].iloc[-1], x1=df["date"].iloc[-1] + pd.Timedelta(milliseconds=int(_bar_w_ms * _vp[_j] / _max_vp)),
+                            y0=_edges[_j], y1=_edges[_j+1],
+                            fillcolor="rgba(100,181,246,0.25)", line_width=0, row=1, col=1)
+        except Exception:
+            pass  # volume profile is a nice-to-have
         colors_fib = ["#ef5350", "#ff9800", "#26a69a", "#2962ff", "#ab47bc", "#26a69a"]
         for i, (label, val) in enumerate(fib.items()):
             fig.add_hline(y=val, line_dash="dash", line_color=colors_fib[i], opacity=0.4, line_width=1, row=1, col=1,
                 annotation_text=f"Fib {label}: {val:.2f}", annotation_position="top left", annotation_font_size=8, annotation_font_color=colors_fib[i])
         for r in res_levels[-3:]:
-            fig.add_hline(y=r, line_dash="solid", line_color="#ef5350", line_width=1.5, opacity=0.7, row=1, col=1,
-                annotation_text=f"R: {r}", annotation_position="top right", annotation_font_size=9, annotation_font_color="#ef5350")
+            fig.add_hline(y=r, line_dash="solid", line_color="#ef5350", line_width=3, opacity=0.85, row=1, col=1,
+                annotation_text=f"\u25cf R: {r:.2f}", annotation_position="top right", annotation_font_size=11, annotation_font_color="#ef5350")
+            band_r = abs(r * 0.005)
+            fig.add_hrect(y0=r - band_r, y1=r + band_r, fillcolor="rgba(239,83,80,0.12)", line_width=0, row=1, col=1)
         for s in sup_levels[-3:]:
-            fig.add_hline(y=s, line_dash="solid", line_color="#26a69a", line_width=1.5, opacity=0.7, row=1, col=1,
-                annotation_text=f"S: {s}", annotation_position="bottom right", annotation_font_size=9, annotation_font_color="#26a69a")
+            fig.add_hline(y=s, line_dash="solid", line_color="#26a69a", line_width=3, opacity=0.85, row=1, col=1,
+                annotation_text=f"\u25cf S: {s:.2f}", annotation_position="bottom right", annotation_font_size=11, annotation_font_color="#26a69a")
+            band_s = abs(s * 0.005)
+            fig.add_hrect(y0=s - band_s, y1=s + band_s, fillcolor="rgba(38,166,154,0.12)", line_width=0, row=1, col=1)
         vol_colors = ["#26a69a" if c >= o else "#ef5350" for c, o in zip(df["close"], df["open"])]
         fig.add_trace(go.Bar(x=df["date"], y=vol, name="Volume", marker_color=vol_colors, opacity=0.5), row=2, col=1)
         fig.add_trace(go.Scatter(x=df["date"], y=obv, name="OBV", line=dict(color="#ab47bc", width=1.5)), row=2, col=1)
@@ -579,15 +608,17 @@ def _render_full_analysis(df, sym=""):
             font=dict(size=10, family="Trebuchet MS, sans-serif"),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             hovermode="x unified",
-            # TradingView-style zoom: drag to pan, scroll wheel to zoom (no click-drag box zoom)
-            dragmode="pan")
+            dragmode="pan",
+            xaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across", spikecolor="rgba(150,150,150,0.5)"),
+            yaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across", spikecolor="rgba(150,150,150,0.5)"))
         fig.update_xaxes(showgrid=False, showline=True, linecolor="rgba(50,50,50,0.3)")
         fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="rgba(50,50,50,0.2)", side="right", showline=True, linecolor="rgba(50,50,50,0.3)")
         fig.update_yaxes(tickformat=".2f", row=1, col=1)
         fig.update_yaxes(range=[0, 100], row=4, col=1)
+        fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
         st.plotly_chart(fig, use_container_width=True, config={
             "scrollZoom": True, "displayModeBar": True, "displaylogo": False, "responsive": True,
-            "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
+            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
     except Exception as chart_err:
         st.error(f"Chart error: {type(chart_err).__name__}: {chart_err}")
@@ -727,7 +758,7 @@ def _render_monte_carlo(df, sym=""):
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
     })
 
 
@@ -835,7 +866,7 @@ def _render_ml_prediction(df, sym=""):
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
     })
 
     st.caption("\u26a0\ufe0f ML predictions are based on historical patterns. NOT financial advice. Use for education only.")
@@ -964,7 +995,7 @@ def _run_ai_strategy_backtest(df, sym, strategy_name, risk_rules):
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
     })
 
 
@@ -975,7 +1006,7 @@ def render_ai_analysis():
     with sub_tabs[0]: _render_photo_upload()
     with sub_tabs[1]:
         sym = st.text_input("Symbol", value="RELIANCE.NS", placeholder="AAPL, RELIANCE.NS, BTC-USD...", key="ai_analysis_sym")
-        period = st.selectbox("Period", ["6mo", "1y", "2y", "5y", "10y"], index=4, key="ai_analysis_period")
+        period = st.selectbox("Period", ["6mo", "1y", "2y", "5y", "10y"], index=3, key="ai_analysis_period")
         if st.button("\U0001f50d Run Full Analysis", type="primary", key="ai_run_analysis"):
             st.session_state["ai_analysis_data"] = {"sym": sym, "period": period}; st.rerun()
         data_params = st.session_state.get("ai_analysis_data")

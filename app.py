@@ -176,7 +176,7 @@ if "connection" not in st.session_state:
 if "credentials" not in st.session_state:
     st.session_state.credentials = {}
 if "period" not in st.session_state:
-    st.session_state.period = "2y"
+    st.session_state.period = "5y"
 if "interval" not in st.session_state:
     st.session_state.interval = "1d"
 if "backtest_result" not in st.session_state:
@@ -258,6 +258,7 @@ def bollinger(series, period=20, mult=2):
     return upper, mid, lower
 
 def detect_patterns(df):
+    """Detect candlestick patterns on last 3 candles — TradingView style."""
     n = len(df)
     if n < 3:
         return ["Not enough data for pattern detection"]
@@ -266,22 +267,69 @@ def detect_patterns(df):
     rng = (last["high"] - last["low"]) or 1
     upper_wick = last["high"] - max(last["open"], last["close"])
     lower_wick = min(last["open"], last["close"]) - last["low"]
+    prev_body = abs(prev["close"] - prev["open"])
+    prev_rng = (prev["high"] - prev["low"]) or 1
+    prev2_body = abs(prev2["close"] - prev2["open"])
     patterns = []
+
+    # ── Single candle patterns ──
     if body / rng < 0.12:
-        patterns.append("🔴 Doji — indecision, possible reversal")
+        patterns.append("\U0001f7e1 Doji \u2014 indecision, possible reversal")
+    if body / rng < 0.05:
+        patterns.append("\U0001f7e1 Dragonfly Doji \u2014 strong bullish reversal signal (if at support)")
     if lower_wick > body * 2 and upper_wick < body * 0.5 and last["close"] > last["open"]:
-        patterns.append("🟢 Hammer — bullish reversal signal")
+        patterns.append("\U0001f7e2 Hammer \u2014 bullish reversal signal")
     if upper_wick > body * 2 and lower_wick < body * 0.5 and last["close"] < last["open"]:
-        patterns.append("🔴 Shooting star — bearish reversal signal")
+        patterns.append("\U0001f534 Shooting Star \u2014 bearish reversal signal")
+    if lower_wick > body * 2 and upper_wick < body * 0.3 and last["close"] < last["open"]:
+        patterns.append("\U0001f534 Hanging Man \u2014 bearish reversal (at top of uptrend)")
+    if body / rng > 0.9 and last["close"] > last["open"]:
+        patterns.append("\U0001f7e2 Bullish Marubozu \u2014 strong buying pressure, continuation")
+    if body / rng > 0.9 and last["close"] < last["open"]:
+        patterns.append("\U0001f534 Bearish Marubozu \u2014 strong selling pressure, continuation")
+    if lower_wick > body * 1.5 and upper_wick > body * 1.5 and body / rng < 0.3:
+        patterns.append("\u26aa Spinning Top \u2014 indecision, neither buyers nor sellers in control")
+
+    # ── Two candle patterns ──
     if prev["close"] < prev["open"] and last["close"] > last["open"] and last["close"] > prev["open"] and last["open"] < prev["close"]:
-        patterns.append("🟢 Bullish engulfing — buyers overwhelming sellers")
+        patterns.append("\U0001f7e2 Bullish Engulfing \u2014 buyers overwhelming sellers")
     if prev["close"] > prev["open"] and last["close"] < last["open"] and last["close"] < prev["open"] and last["open"] > prev["close"]:
-        patterns.append("🔴 Bearish engulfing — sellers overwhelming buyers")
-    if prev2["close"] < prev2["open"] and abs(prev["close"] - prev["open"]) / ((prev["high"] - prev["low"]) or 1) < 0.3 and last["close"] > last["open"] and last["close"] > (prev2["open"] + prev2["close"]) / 2:
-        patterns.append("🟢 Morning star — 3-candle bullish reversal")
+        patterns.append("\U0001f534 Bearish Engulfing \u2014 sellers overwhelming buyers")
+    if prev["close"] < prev["open"] and last["close"] > last["open"] and last["close"] > prev["close"] and last["open"] < prev["close"] and (last["close"] - last["open"]) < prev_body:
+        patterns.append("\U0001f7e2 Piercing Line \u2014 partial bullish reversal")
+    if prev["close"] > prev["open"] and last["close"] < last["open"] and last["close"] < prev["close"] and last["open"] > prev["open"] and (prev["close"] - last["close"]) < prev_body:
+        patterns.append("\U0001f534 Dark Cloud Cover \u2014 partial bearish reversal")
+    if prev["close"] > prev["open"] and last["close"] > prev["close"] and last["open"] > prev["open"] and last["close"] > last["open"]:
+        patterns.append("\U0001f7e2 Upside Tasuki Gap \u2014 bullish continuation (gap up)")
+    if prev["close"] < prev["open"] and last["close"] < prev["close"] and last["open"] < prev["open"] and last["close"] < last["open"]:
+        patterns.append("\U0001f534 Downside Tasuki Gap \u2014 bearish continuation (gap down)")
+
+    # ── Three candle patterns ──
+    if (prev2["close"] < prev2["open"]
+        and abs(prev["close"] - prev["open"]) / ((prev["high"] - prev["low"]) or 1) < 0.3
+        and last["close"] > last["open"] and last["close"] > (prev2["open"] + prev2["close"]) / 2):
+        patterns.append("\U0001f7e2 Morning Star \u2014 3-candle bullish reversal")
+    if (prev2["close"] > prev2["open"]
+        and abs(prev["close"] - prev["open"]) / ((prev["high"] - prev["low"]) or 1) < 0.3
+        and last["close"] < last["open"] and last["close"] < (prev2["open"] + prev2["close"]) / 2):
+        patterns.append("\U0001f534 Evening Star \u2014 3-candle bearish reversal")
+    if (prev2["close"] > prev2["open"] and prev["close"] > prev["open"] and last["close"] > last["open"]
+        and last["close"] > prev["close"] and prev["close"] > prev2["close"]):
+        patterns.append("\U0001f7e2 Three White Soldiers \u2014 strong bullish reversal")
+    if (prev2["close"] < prev2["open"] and prev["close"] < prev["open"] and last["close"] < last["open"]
+        and last["close"] < prev["close"] and prev["close"] < prev2["close"]):
+        patterns.append("\U0001f534 Three Black Crows \u2014 strong bearish reversal")
+    if (prev2["close"] > prev2["open"] and prev["close"] > prev["open"] and last["close"] < last["open"]
+        and last["open"] > prev["close"] and last["close"] > prev["open"]):
+        patterns.append("\U0001f534 Two Black Gapping \u2014 bearish continuation after gap")
+    if (prev2["close"] < prev2["open"] and prev["close"] < prev["open"] and last["close"] > last["open"]
+        and last["open"] < prev["close"] and last["close"] > prev["open"]):
+        patterns.append("\U0001f7e2 Abandoned Baby (bullish) \u2014 rare strong reversal")
+
     if not patterns:
-        patterns.append("➡️ No strong single/multi-candle pattern detected — trend continuation likely")
+        patterns.append("\u27a1\ufe0f No strong candlestick pattern detected \u2014 trend continuation likely")
     return patterns
+
 
 # ──────────────────────────────────────────────
 # PIVOT DETECTION & TREND LINES
@@ -842,28 +890,18 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         subplot_titles=("Price & Indicators", "Volume", "RSI (14)", "MACD (12, 26, 9)"),
     )
 
-    # TradingView-style candlestick - exact TradingView colors & styling
+    # ── TradingView-style candlestick ──
     fig.add_trace(go.Candlestick(
         x=df["date"], open=df["open"], high=df["high"], low=df["low"], close=df["close"],
         name="OHLC",
-        # TradingView exact colors: #26a69a (bullish green), #ef5350 (bearish red)
-        increasing_line_color="#26a69a",
-        decreasing_line_color="#ef5350",
-        increasing_fillcolor="#26a69a",
-        decreasing_fillcolor="#ef5350",
-        # Thicker wicks for better visibility
-        line_width=2,
-        # Narrow whiskers to emphasize body
-        whiskerwidth=0.3,
-    ), row=1, col=1)
+        increasing_line_color="#26a69a", decreasing_line_color="#ef5350",
+        increasing_fillcolor="#26a69a", decreasing_fillcolor="#ef5350",
+        line_width=2, whiskerwidth=0.3,
+        hoverlabel=dict(bgcolor=bg_color, font=dict(size=12, family="Trebuchet MS, sans-serif"))),
+        row=1, col=1)
+    fig.update_traces(increasing_line_width=2, decreasing_line_width=2, selector=dict(type="candlestick"))
 
-    # Ensure minimum candle width (TradingView style: visible bodies)
-    fig.update_traces(
-        increasing_line_width=2,
-        decreasing_line_width=2,
-        selector=dict(type="candlestick"),
-    )
-
+    # ── Moving Averages ──
     if show_ma:
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["sma20"], name="SMA 20",
                                  line=dict(color="#2962ff", width=1.8)), row=1, col=1)
@@ -873,12 +911,14 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
             fig.add_trace(go.Scatter(x=df["date"], y=analysis["sma200"], name="SMA 200",
                                      line=dict(color="#9c27b0", width=1.8)), row=1, col=1)
 
+    # ── Bollinger Bands ──
     if show_bb:
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["bb_upper_series"], name="BB Upper",
                                  line=dict(color="#9575cd", width=1.2, dash="dot"), opacity=0.7), row=1, col=1)
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["bb_lower_series"], name="BB Lower",
                                  line=dict(color="#9575cd", width=1.2, dash="dot"), opacity=0.7, showlegend=False), row=1, col=1)
 
+    # ── Trend Lines ──
     if show_trend and analysis.get("res_trend_vals") is not None:
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["res_trend_vals"], name="Resistance Trend",
                                  line=dict(color="#ef5350", width=2, dash="dash"), opacity=0.9), row=1, col=1)
@@ -886,18 +926,67 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         fig.add_trace(go.Scatter(x=df["date"], y=analysis["sup_trend_vals"], name="Support Trend",
                                  line=dict(color="#26a69a", width=2, dash="dash"), opacity=0.9), row=1, col=1)
 
-    # Support / Resistance horizontal lines - BOLD and visible like TradingView
-    fig.add_hline(y=analysis["resistance"], line_dash="solid", line_color="#ef5350",
-                  line_width=2, opacity=0.8, row=1, col=1,
-                  annotation_text=f"R: {analysis['resistance']:.2f}",
-                  annotation_position="top right", annotation_font_size=10,
-                  annotation_font_color="#ef5350")
-    fig.add_hline(y=analysis["support"], line_dash="solid", line_color="#26a69a",
-                  line_width=2, opacity=0.8, row=1, col=1,
-                  annotation_text=f"S: {analysis['support']:.2f}",
-                  annotation_position="bottom right", annotation_font_size=10,
-                  annotation_font_color="#26a69a")
+    # ── Support/Resistance zones (TradingView-style shaded bands) ──
+    res_val = analysis["resistance"]
+    sup_val = analysis["support"]
+    band_range = (res_val - sup_val) * 0.02 or res_val * 0.01
+    # Shaded resistance zone
+    fig.add_hrect(y0=res_val - band_range, y1=res_val + band_range,
+                  fillcolor="rgba(239,83,80,0.12)", line_width=0, row=1, col=1)
+    # Shaded support zone
+    fig.add_hrect(y0=sup_val - band_range, y1=sup_val + band_range,
+                  fillcolor="rgba(38,166,154,0.12)", line_width=0, row=1, col=1)
+    # BOLD support/resistance lines
+    fig.add_hline(y=res_val, line_dash="solid", line_color="#ef5350", line_width=3, opacity=0.85, row=1, col=1,
+                  annotation_text=f"\u25cf R: {res_val:.2f}", annotation_position="top right",
+                  annotation_font_size=11, annotation_font_color="#ef5350")
+    fig.add_hline(y=sup_val, line_dash="solid", line_color="#26a69a", line_width=3, opacity=0.85, row=1, col=1,
+                  annotation_text=f"\u25cf S: {sup_val:.2f}", annotation_position="bottom right",
+                  annotation_font_size=11, annotation_font_color="#26a69a")
 
+    # ── Fibonacci Retracement Levels (TradingView-style) ──
+    period_high = analysis.get("period_high", res_val)
+    period_low = analysis.get("period_low", sup_val)
+    fib_range = period_high - period_low
+    if fib_range > 0:
+        fib_levels = {"0%": period_high, "23.6%": period_high - fib_range * 0.236,
+                      "38.2%": period_high - fib_range * 0.382, "50%": period_high - fib_range * 0.5,
+                      "61.8%": period_high - fib_range * 0.618, "78.6%": period_high - fib_range * 0.786,
+                      "100%": period_low}
+        fib_colors = ["#ef5350", "#ff9800", "#26a69a", "#9c27b0", "#2962ff", "#ab47bc", "#26a69a"]
+        for i, (label, val) in enumerate(fib_levels.items()):
+            fig.add_hline(y=val, line_dash="dot", line_color=fib_colors[i % len(fib_colors)],
+                          line_width=1, opacity=0.35, row=1, col=1,
+                          annotation_text=f"Fib {label}: {val:.2f}", annotation_position="top left",
+                          annotation_font_size=8, annotation_font_color=fib_colors[i % len(fib_colors)])
+
+    # ── Volume Profile (horizontal histogram on right side) ──
+    if "volume" in df.columns and len(df) > 20:
+        close_vals = df["close"].values
+        vol_vals = df["volume"].values
+        n_bins = min(30, max(10, len(df) // 5))
+        price_min, price_max = float(np.min(close_vals)), float(np.max(close_vals))
+        bin_edges = np.linspace(price_min, price_max, n_bins + 1)
+        bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2
+        vol_profile = np.zeros(n_bins)
+        for j in range(len(close_vals)):
+            idx = min(int((close_vals[j] - price_min) / (price_max - price_min) * n_bins), n_bins - 1)
+            if idx >= 0:
+                vol_profile[idx] += vol_vals[j]
+        max_vp = vol_profile.max() if vol_profile.max() > 0 else 1
+        # Scale volume profile bars to fit within ~15% of price chart width
+        x_max = df["date"].iloc[-1]
+        x_range_ms = (df["date"].iloc[-1] - df["date"].iloc[0]).total_seconds() * 1000
+        bar_width_ms = x_range_ms * 0.12  # 12% of chart width
+        for j in range(n_bins):
+            if vol_profile[j] > 0:
+                fig.add_shape(type="rect",
+                    xref="x", yref="y",
+                    x0=df["date"].iloc[-1], x1=df["date"].iloc[-1] + pd.Timedelta(milliseconds=int(bar_width_ms * vol_profile[j] / max_vp)),
+                    y0=bin_edges[j], y1=bin_edges[j+1],
+                    fillcolor="rgba(100,181,246,0.25)", line_width=0, row=1, col=1)
+
+    # ── Volume bars ──
     if "volume" in df.columns:
         colors = ["#26a69a" if c >= o else "#ef5350" for c, o in zip(df["close"], df["open"])]
         fig.add_trace(go.Bar(x=df["date"], y=df["volume"], name="Volume",
@@ -906,11 +995,14 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
             fig.add_hline(y=analysis["avg_vol"], line_dash="dash", line_color="#7c7b76",
                           opacity=0.5, row=2, col=1)
 
+    # ── RSI ──
     fig.add_trace(go.Scatter(x=df["date"], y=analysis["rsi_vals"], name="RSI",
                              line=dict(color="#ab47bc", width=1.8)), row=3, col=1)
     fig.add_hline(y=70, line_dash="dot", line_color="#ef5350", line_width=1, opacity=0.5, row=3, col=1)
     fig.add_hline(y=30, line_dash="dot", line_color="#26a69a", line_width=1, opacity=0.5, row=3, col=1)
+    fig.add_hline(y=50, line_dash="dash", line_color="#78909c", line_width=1, opacity=0.3, row=3, col=1)
 
+    # ── MACD ──
     hist_colors = ["#26a69a" if h >= 0 else "#ef5350" for h in analysis["hist"]]
     fig.add_trace(go.Bar(x=df["date"], y=analysis["hist"], name="MACD Hist",
                          marker_color=hist_colors, opacity=0.6), row=4, col=1)
@@ -931,17 +1023,20 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         plot_bgcolor=bg_color,
         hovermode="x unified",
         dragmode="pan",
-        # TradingView-like crosshair
-        xaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across", spikecolor="rgba(150,150,150,0.4)"),
-        yaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across", spikecolor="rgba(150,150,150,0.4)"),
+        # TradingView-style crosshair
+        xaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across",
+                   spikecolor="rgba(150,150,150,0.5)", showline=True, linecolor=grid_color),
+        yaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across",
+                   spikecolor="rgba(150,150,150,0.5)", showline=True, linecolor=grid_color, side="right"),
     )
-    # TradingView-like axis styling
     fig.update_xaxes(showgrid=False, showline=True, linecolor=grid_color, mirror=True)
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor=grid_color, side="right",
                      showline=True, linecolor=grid_color, mirror=True)
-    # Fix y-axis to show proper price formatting
     fig.update_yaxes(tickformat=".2f", row=1, col=1)
+    # Weekend gaps (TradingView style)
+    fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
     return fig
+
 
 def trend_chart(df, theme="dark"):
     template = "plotly_dark" if theme == "dark" else "plotly_white"
@@ -1142,7 +1237,7 @@ else:
         st.rerun()
 
     # Period fixed to 2y (live + historical)
-    st.session_state.period = "2y"
+    st.session_state.period = "5y"
     st.session_state.interval = "1d"
     # ── Fetch data ──
     with st.spinner(f"Fetching real data for {ticker}..."):
@@ -1313,10 +1408,22 @@ else:
             "displayModeBar": True,
             "displaylogo": False,
             "responsive": True,
-            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "eraseshape"],
+            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape", "toggleHover"],
             "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
         },
     )
+
+    # ── Clear trading signal box (TradingView-style) ──
+    sig = latest_signal(df)
+    sig_colors = {"BUY": "#0ca30c", "SELL": "#d03b3b", "HOLD": "#898781"}
+    sig_color = sig_colors.get(sig["signal"], "#898781")
+    rsi_val = analysis.get("last_rsi", 50)
+    rsi_text = "Oversold (<30)" if rsi_val < 30 else "Overbought (>70)" if rsi_val > 70 else "Neutral"
+    st.markdown(f"""
+    <div style="padding:16px 20px;border-radius:12px;background:{sig_color}18;border:2px solid {sig_color};color:{sig_color};font-size:1.05rem;font-weight:600;margin:8px 0;">
+        ▶ SIGNAL: {sig["signal"]} &nbsp;|&nbsp; Price: ₹{sig["close"]:,.2f} &nbsp;|&nbsp; RSI: {rsi_val:.1f} ({rsi_text}) &nbsp;|&nbsp; SMA20: {sig["sma_fast"] or "—"} &nbsp;|&nbsp; SMA50: {sig["sma_slow"] or "—"}
+    </div>
+    """, unsafe_allow_html=True)
     # ── Top metrics row ──
     col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
     with col_m1:
