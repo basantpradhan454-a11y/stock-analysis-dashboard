@@ -613,26 +613,39 @@ def _render_full_analysis(df, sym=""):
         st.caption("No EMA20/SMA50 crossover entry/exit signals in this window yet.")
 
     # ── NEW: Candlestick Pattern Detection ──
-    st.markdown("#### \U0001f50d Candlestick Patterns (last 10 days)")
-    recent_patterns = candle_patterns.tail(10)
-    detected = recent_patterns[recent_patterns != ""]
-    if len(detected) > 0:
-        pattern_meanings = {
-            "Doji": "\U0001f7e1 Doji \u2014 indecision, possible reversal",
-            "Hammer": "\U0001f7e2 Hammer \u2014 bullish reversal signal",
-            "Shooting Star": "\U0001f534 Shooting Star \u2014 bearish reversal signal",
-            "Bullish Engulfing": "\U0001f7e2 Bullish Engulfing \u2014 buyers overwhelming sellers",
-            "Bearish Engulfing": "\U0001f534 Bearish Engulfing \u2014 sellers overwhelming sellers",
-        }
-        for date, pats in detected.items():
-            for pat in pats.rstrip(";").split(";"):
-                pat = pat.strip()
-                if pat in pattern_meanings:
-                    st.markdown(f"- **{date.strftime('%Y-%m-%d')}**: {pattern_meanings[pat]}")
-                elif pat:
-                    st.markdown(f"- **{date.strftime('%Y-%m-%d')}**: {pat}")
-    else:
-        st.markdown("- \u27a1\ufe0f No strong candlestick pattern detected in last 10 days \u2014 trend continuation likely")
+    try:
+        st.markdown("#### \U0001f50d Candlestick Patterns (last 10 days)")
+        recent_patterns = candle_patterns.tail(10)
+        detected = recent_patterns[recent_patterns != ""]
+        if len(detected) > 0:
+            pattern_meanings = {
+                "Doji": "\U0001f7e1 Doji \u2014 indecision, possible reversal",
+                "Hammer": "\U0001f7e2 Hammer \u2014 bullish reversal signal",
+                "Shooting Star": "\U0001f534 Shooting Star \u2014 bearish reversal signal",
+                "Bullish Engulfing": "\U0001f7e2 Bullish Engulfing \u2014 buyers overwhelming sellers",
+                "Bearish Engulfing": "\U0001f534 Bearish Engulfing \u2014 sellers overwhelming sellers",
+            }
+            for idx, pats in detected.items():
+                try:
+                    dt = df["date"].iloc[int(idx)] if isinstance(idx, (int, np.integer)) else pd.Timestamp(idx)
+                except Exception:
+                    dt = pd.Timestamp(idx) if not isinstance(idx, pd.Timestamp) else idx
+                date_str = dt.strftime('%Y-%m-%d') if hasattr(dt, 'strftime') else str(dt)
+                for pat in pats.rstrip(";").split(";"):
+                    pat = pat.strip()
+                    if pat in pattern_meanings:
+                        st.markdown(f"- **{date_str}**: {pattern_meanings[pat]}")
+                    elif pat:
+                        st.markdown(f"- **{date_str}**: {pat}")
+        else:
+            st.markdown("- \u27a1\ufe0f No strong candlestick pattern detected in last 10 days \u2014 trend continuation likely")
+    except Exception as candle_err:
+        st.error(f"Candlestick pattern error: {type(candle_err).__name__}: {candle_err}")
+        import traceback as _tb; st.text(_tb.format_exc())
+
+    except Exception as candle_err:
+        st.error(f"Candlestick pattern error: {type(candle_err).__name__}: {candle_err}")
+        import traceback as _tb; st.text(_tb.format_exc())
 
     # ── Quant Analysis with Skewness/Kurtosis ──
     st.markdown("#### \U0001f4c8 Quant Analysis")
