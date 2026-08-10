@@ -590,6 +590,382 @@ def compute_ai_summary(df):
         },
     }
 
+
+# ──────────────────────────────────────────────
+# ENHANCED SUPPORT/RESISTANCE (swing-based with touch counts)
+# ──────────────────────────────────────────────
+
+def find_support_resistance_enhanced(df, window=10, tolerance=0.015):
+    """Find swing highs/lows, cluster nearby levels, return top support & resistance
+    with touch counts (strength). Mirrors the standalone dashboard's logic."""
+    highs = df["high"]
+    lows = df["low"]
+
+    swing_highs, swing_lows = [], []
+    for i in range(window, len(df) - window):
+        if highs.iloc[i] == highs.iloc[i - window:i + window + 1].max():
+            swing_highs.append(highs.iloc[i])
+        if lows.iloc[i] == lows.iloc[i - window:i + window + 1].min():
+            swing_lows.append(lows.iloc[i])
+
+    def cluster(levels):
+        levels = sorted(levels)
+        clusters = []
+        for lvl in levels:
+            placed = False
+            for c in clusters:
+                if abs(lvl - c[-1]) / c[-1] < tolerance:
+                    c.append(lvl)
+                    placed = True
+                    break
+            if not placed:
+                clusters.append([lvl])
+        return sorted([(sum(c) / len(c), len(c)) for c in clusters], key=lambda x: -x[1])
+
+    resistance_levels = cluster(swing_highs)
+    support_levels = cluster(swing_lows)
+
+    current_price = df["close"].iloc[-1]
+    resistance = [r for r in resistance_levels if r[0] > current_price]
+    support = [s for s in support_levels if s[0] < current_price]
+
+    nearest_resistance = min(resistance, key=lambda x: x[0]) if resistance else None
+    nearest_support = max(support, key=lambda x: x[0]) if support else None
+
+    return nearest_support, nearest_resistance, support_levels[:5], resistance_levels[:5]
+
+
+# ──────────────────────────────────────────────
+# INDIVIDUAL INDICATOR STATUS (Signals Summary)
+# ──────────────────────────────────────────────
+
+def generate_indicator_signals(df):
+    """Generate individual indicator verdicts — RSI, MACD, Trend, Bollinger.
+    Returns a list of (indicator_name, signal_text, value_str) tuples."""
+    latest = df.iloc[-1]
+    close = df["close"]
+    signals = []
+
+    # ── RSI ──
+    rsi_val = rsi(close, 14).iloc[-1]
+    if pd.notna(rsi_val):
+        if rsi_val > 70:
+            signals.append(("RSI (14)", "Overbought", f"{rsi_val:.1f}"))
+        elif rsi_val < 30:
+            signals.append(("RSI (14)", "Oversold", f"{rsi_val:.1f}"))
+        else:
+            signals.append(("RSI (14)", "Neutral", f"{rsi_val:.1f}"))
+    else:
+        signals.append(("RSI (14)", "—", "—"))
+
+    # ── MACD ──
+    macd_line, signal_line, hist = macd(close)
+    if pd.notna(macd_line.iloc[-1]) and pd.notna(signal_line.iloc[-1]):
+        if macd_line.iloc[-1] > signal_line.iloc[-1]:
+            signals.append(("MACD (12,26,9)", "Bullish Crossover", f"{hist.iloc[-1]:.4f}"))
+        else:
+            signals.append(("MACD (12,26,9)", "Bearish Crossover", f"{hist.iloc[-1]:.4f}"))
+    else:
+        signals.append(("MACD (12,26,9)", "—", "—"))
+
+    # ── Trend (SMA50 vs SMA200) ──
+    sma50_val = close.rolling(50).mean().iloc[-1]
+    sma200_val = close.rolling(200).mean().iloc[-1]
+    if pd.notna(sma50_val) and pd.notna(sma200_val):
+        if latest["close"] > sma50_val > sma200_val:
+            signals.append(("Trend", "Strong Uptrend", "Close > SMA50 > SMA200"))
+        elif latest["close"] < sma50_val < sma200_val:
+            signals.append(("Trend", "Strong Downtrend", "Close < SMA50 < SMA200"))
+        else:
+            signals.append(("Trend", "Sideways / Mixed", "—"))
+    else:
+        signals.append(("Trend", "—", "Not enough data"))
+
+    # ── Bollinger Bands ──
+    bb_upper, bb_mid, bb_lower = bollinger(close, 20, 2)
+    if pd.notna(bb_upper.iloc[-1]) and pd.notna(bb_lower.iloc[-1]):
+        if latest["close"] > bb_upper.iloc[-1]:
+            signals.append(("Bollinger Bands", "Above Upper Band (Overextended)", "—"))
+        elif latest["close"] < bb_lower.iloc[-1]:
+            signals.append(("Bollinger Bands", "Below Lower Band (Oversold zone)", "—"))
+        else:
+            signals.append(("Bollinger Bands", "Within Bands (Normal)", "—"))
+    else:
+        signals.append(("Bollinger Bands", "—", "—"))
+
+    # ── EMA20 vs SMA20 ──
+    ema20_val = close.ewm(span=20, adjust=False).mean().iloc[-1]
+    sma20_val = close.rolling(20).mean().iloc[-1]
+    if pd.notna(ema20_val) and pd.notna(sma20_val):
+        if ema20_val > sma20_val:
+            signals.append(("EMA 20 vs SMA 20", "Bullish (EMA above)", f"{ema20_val:.2f} > {sma20_val:.2f}"))
+        else:
+            signals.append(("EMA 20 vs SMA 20", "Bearish (EMA below)", f"{ema20_val:.2f} < {sma20_val:.2f}"))
+    else:
+        signals.append(("EMA 20 vs SMA 20", "—", "—"))
+
+    return signals
+
+
+# ──────────────────────────────────────────────
+# ENHANCED CANDLESTICK PATTERN DETECTION (scan last 6 candles)
+# ──────────────────────────────────────────────
+
+def detect_patterns_enhanced(df):
+    """Detect candlestick patterns scanning the last ~6 candles (enhanced version).
+    Merges with the existing 3-candle detection for comprehensive coverage."""
+    n = len(df)
+    if n < 7:
+        return detect_patterns(df)
+
+    o, h, l, c = df["open"], df["high"], df["low"], df["close"]
+    body = (c - o).abs()
+    range_ = (h - l).replace(0, np.nan)
+    upper_wick = h - df[["open", "close"]].max(axis=1)
+    lower_wick = df[["open", "close"]].min(axis=1) - l
+
+    found = {}  # date -> list of (pattern_name, type)
+
+    for i in range(max(1, n - 6), n):
+        date = str(df["date"].iloc[i].date()) if "date" in df.columns else str(i)
+        bo, bh, bl, bc = o.iloc[i], h.iloc[i], l.iloc[i], c.iloc[i]
+        b = body.iloc[i]
+        r = range_.iloc[i]
+        uw = upper_wick.iloc[i]
+        lw = lower_wick.iloc[i]
+
+        if pd.isna(r) or r == 0:
+            continue
+
+        patterns_at_date = []
+
+        # Doji
+        if b / r < 0.1:
+            patterns_at_date.append(("Doji", "Indecision", "🟡"))
+        # Hammer
+        elif lw > 2 * b and uw < b and bc >= bo:
+            patterns_at_date.append(("Hammer", "Bullish reversal", "🟢"))
+        # Shooting Star
+        elif uw > 2 * b and lw < b and bc <= bo:
+            patterns_at_date.append(("Shooting Star", "Bearish reversal", "🔴"))
+        # Hanging Man
+        elif lw > 2 * b and uw < b * 0.3 and bc < bo:
+            patterns_at_date.append(("Hanging Man", "Bearish reversal", "🔴"))
+        # Bullish Marubozu
+        elif b / r > 0.9 and bc > bo:
+            patterns_at_date.append(("Bullish Marubozu", "Strong buying", "🟢"))
+        # Bearish Marubozu
+        elif b / r > 0.9 and bc < bo:
+            patterns_at_date.append(("Bearish Marubozu", "Strong selling", "🔴"))
+        # Spinning Top
+        elif lw > b * 1.5 and uw > b * 1.5 and b / r < 0.3:
+            patterns_at_date.append(("Spinning Top", "Indecision", "⚪"))
+
+        # Two-candle patterns
+        if i > 0:
+            po, pc = o.iloc[i - 1], c.iloc[i - 1]
+            prev_bearish = pc < po
+            prev_bullish = pc > po
+            curr_bullish = bc > bo
+            curr_bearish = bc < bo
+
+            if prev_bearish and curr_bullish and bc > po and bo < pc:
+                patterns_at_date.append(("Bullish Engulfing", "Bullish reversal", "🟢"))
+            elif prev_bullish and curr_bearish and bo > pc and bc < po:
+                patterns_at_date.append(("Bearish Engulfing", "Bearish reversal", "🔴"))
+            # Piercing Line
+            if prev_bearish and curr_bullish and bc > po and bo < pc and (bc - bo) < body.iloc[i-1]:
+                patterns_at_date.append(("Piercing Line", "Partial bullish reversal", "🟢"))
+            # Dark Cloud Cover
+            if prev_bullish and curr_bearish and bc < po and bo > pc and (po - bc) < body.iloc[i-1]:
+                patterns_at_date.append(("Dark Cloud Cover", "Partial bearish reversal", "🔴"))
+
+        # Three-candle patterns
+        if i > 1:
+            prev2_c = c.iloc[i - 2]
+            prev2_o = o.iloc[i - 2]
+            prev_c = c.iloc[i - 1]
+            prev_o = o.iloc[i - 1]
+            # Morning Star
+            if prev2_c < prev2_o and abs(prev_c - prev_o) / ((h.iloc[i-1] - l.iloc[i-1]) or 1) < 0.3 and bc > bo and bc > (prev2_o + prev2_c) / 2:
+                patterns_at_date.append(("Morning Star", "3-candle bullish reversal", "🟢"))
+            # Evening Star
+            if prev2_c > prev2_o and abs(prev_c - prev_o) / ((h.iloc[i-1] - l.iloc[i-1]) or 1) < 0.3 and bc < bo and bc < (prev2_o + prev2_c) / 2:
+                patterns_at_date.append(("Evening Star", "3-candle bearish reversal", "🔴"))
+            # Three White Soldiers
+            if prev2_c > prev2_o and prev_c > prev_o and bc > bo and bc > prev_c and prev_c > prev2_c:
+                patterns_at_date.append(("Three White Soldiers", "Strong bullish reversal", "🟢"))
+            # Three Black Crows
+            if prev2_c < prev2_o and prev_c < prev_o and bc < bo and bc < prev_c and prev_c < prev2_c:
+                patterns_at_date.append(("Three Black Crows", "Strong bearish reversal", "🔴"))
+
+        if patterns_at_date:
+            found[date] = patterns_at_date
+
+    # Format output
+    result = []
+    for date, pats in sorted(found.items(), reverse=True):
+        for pname, ptype, emoji in pats:
+            result.append(f"{emoji} {date}: {pname} — {ptype}")
+    if not result:
+        result.append("➡️ No strong candlestick pattern detected — trend continuation likely")
+    return result
+
+
+# ──────────────────────────────────────────────
+# HTML DASHBOARD EXPORT
+# ──────────────────────────────────────────────
+
+def export_html_dashboard(df, ticker, asset_name, analysis, signals, sr_enhanced, patterns, theme="dark"):
+    """Build a standalone HTML dashboard with Plotly chart + signal summary tables.
+    Returns HTML string for download."""
+    bg_color = "#0e1117" if theme == "dark" else "#ffffff"
+    text_color = "#e6edf3" if theme == "dark" else "#1f2328"
+    card_bg = "#161b22" if theme == "dark" else "#f6f8fa"
+
+    fig = make_subplots(
+        rows=4, cols=1,
+        shared_xaxes=True,
+        vertical_spacing=0.03,
+        row_heights=[0.5, 0.15, 0.2, 0.15],
+        subplot_titles=(
+            f"{asset_name} ({ticker}) — Price & Indicators",
+            "Volume",
+            "RSI (14)",
+            "MACD"
+        )
+    )
+
+    # Row 1: Candlestick + MAs + Bollinger
+    fig.add_trace(go.Candlestick(
+        x=df["date"], open=df["open"], high=df["high"],
+        low=df["low"], close=df["close"], name="Price",
+        increasing_line_color="#26a69a", decreasing_line_color="#ef5350"
+    ), row=1, col=1)
+
+    fig.add_trace(go.Scatter(x=df["date"], y=df["close"].rolling(20).mean(), name="SMA 20",
+                              line=dict(color="orange", width=1)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df["date"], y=df["close"].rolling(50).mean(), name="SMA 50",
+                              line=dict(color="blue", width=1)), row=1, col=1)
+    if len(df) >= 200:
+        fig.add_trace(go.Scatter(x=df["date"], y=df["close"].rolling(200).mean(), name="SMA 200",
+                                  line=dict(color="purple", width=1)), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df["date"], y=df["close"].ewm(span=20, adjust=False).mean(), name="EMA 20",
+                              line=dict(color="cyan", width=1, dash="dash")), row=1, col=1)
+
+    bb_upper, bb_mid, bb_lower = bollinger(df["close"], 20, 2)
+    fig.add_trace(go.Scatter(x=df["date"], y=bb_upper, name="BB Upper",
+                              line=dict(color="gray", width=1, dash="dot")), row=1, col=1)
+    fig.add_trace(go.Scatter(x=df["date"], y=bb_lower, name="BB Lower",
+                              line=dict(color="gray", width=1, dash="dot"),
+                              fill="tonexty", fillcolor="rgba(128,128,128,0.1)"), row=1, col=1)
+
+    # S/R lines
+    ns, nr, sl, rl = sr_enhanced
+    if nr:
+        fig.add_hline(y=nr[0], line_dash="dash", line_color="red", line_width=1.5,
+                      annotation_text=f"Resistance ₹{nr[0]:.1f} ({nr[1]} touches)", annotation_position="top right",
+                      row=1, col=1)
+    if ns:
+        fig.add_hline(y=ns[0], line_dash="dash", line_color="green", line_width=1.5,
+                      annotation_text=f"Support ₹{ns[0]:.1f} ({ns[1]} touches)", annotation_position="bottom right",
+                      row=1, col=1)
+
+    # Row 2: Volume
+    colors = ["#26a69a" if row["close"] >= row["open"] else "#ef5350" for _, row in df.iterrows()]
+    fig.add_trace(go.Bar(x=df["date"], y=df["volume"], name="Volume", marker_color=colors), row=2, col=1)
+    if "volume" in df.columns:
+        fig.add_trace(go.Scatter(x=df["date"], y=df["volume"].rolling(20).mean(), name="Vol MA20",
+                                  line=dict(color="black", width=1)), row=2, col=1)
+
+    # Row 3: RSI
+    rsi_vals = rsi(df["close"], 14)
+    fig.add_trace(go.Scatter(x=df["date"], y=rsi_vals, name="RSI",
+                              line=dict(color="#7b1fa2", width=1.5)), row=3, col=1)
+    fig.add_hline(y=70, line_dash="dash", line_color="red", row=3, col=1)
+    fig.add_hline(y=30, line_dash="dash", line_color="green", row=3, col=1)
+
+    # Row 4: MACD
+    macd_line, signal_line, hist = macd(df["close"])
+    fig.add_trace(go.Bar(x=df["date"], y=hist, name="MACD Hist",
+                          marker_color=np.where(hist >= 0, "#26a69a", "#ef5350")), row=4, col=1)
+    fig.add_trace(go.Scatter(x=df["date"], y=macd_line, name="MACD",
+                              line=dict(color="blue", width=1)), row=4, col=1)
+    fig.add_trace(go.Scatter(x=df["date"], y=signal_line, name="Signal",
+                              line=dict(color="orange", width=1)), row=4, col=1)
+
+    template = "plotly_dark" if theme == "dark" else "plotly_white"
+    fig.update_layout(
+        height=1000,
+        title=f"Technical Analysis Dashboard — {asset_name} ({ticker})",
+        xaxis_rangeslider_visible=False,
+        template=template,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+    )
+    fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])  # skip weekends
+
+    # Signal summary HTML table
+    latest = df.iloc[-1]
+    sig_html = f"""
+    <div style="font-family: sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: {bg_color}; color: {text_color};">
+    <h1 style="text-align:center;">📊 Technical Analysis Dashboard — {asset_name} ({ticker})</h1>
+    <p style="text-align:center; color: gray;">Latest Close: <b>₹{latest['close']:.2f}</b> | Date: {df['date'].iloc[-1]}</p>
+
+    <h2>🔔 Signals Summary</h2>
+    <table border="1" cellpadding="10" style="border-collapse:collapse;width:100%;background:{card_bg};color:{text_color};">
+    <tr style="background:#2a3441;color:#fff;"><th>Indicator</th><th>Signal</th><th>Value</th></tr>
+    """
+    for name, sig, val in signals:
+        sig_html += f"<tr><td>{name}</td><td>{sig}</td><td>{val}</td></tr>"
+    sig_html += "</table>"
+
+    # S/R table
+    sig_html += f"""
+    <h2>📐 Support &amp; Resistance</h2>
+    <table border="1" cellpadding="10" style="border-collapse:collapse;width:100%;background:{card_bg};color:{text_color};">
+    <tr style="background:#2a3441;color:#fff;"><th>Level</th><th>Price</th><th>Touches (Strength)</th></tr>
+    """
+    if nr:
+        sig_html += f"<tr><td>🔴 Nearest Resistance</td><td>₹{nr[0]:.2f}</td><td>{nr[1]}</td></tr>"
+    if ns:
+        sig_html += f"<tr><td>🟢 Nearest Support</td><td>₹{ns[0]:.2f}</td><td>{ns[1]}</td></tr>"
+    sig_html += "<tr><td colspan='3' style='font-weight:bold;'>Other Resistance Levels</td></tr>"
+    for lvl, touches in (rl[1:] if len(rl) > 1 else []):
+        sig_html += f"<tr><td>Resistance</td><td>₹{lvl:.2f}</td><td>{touches}</td></tr>"
+    sig_html += "<tr><td colspan='3' style='font-weight:bold;'>Other Support Levels</td></tr>"
+    for lvl, touches in (sl[1:] if len(sl) > 1 else []):
+        sig_html += f"<tr><td>Support</td><td>₹{lvl:.2f}</td><td>{touches}</td></tr>"
+    sig_html += "</table>"
+
+    # Candlestick patterns
+    sig_html += """
+    <h2>🔍 Detected Candlestick Patterns (recent 6 candles)</h2>
+    <table border="1" cellpadding="10" style="border-collapse:collapse;width:100%;background:%s;color:%s;">
+    <tr style="background:#2a3441;color:#fff;"><th>Pattern</th></tr>
+    """ % (card_bg, text_color)
+    if patterns:
+        for p in patterns:
+            sig_html += f"<tr><td>{p}</td></tr>"
+    else:
+        sig_html += "<tr><td>No significant pattern detected in the last 6 candles.</td></tr>"
+    sig_html += "</table>"
+
+    sig_html += """
+    <p style="color:gray;font-size:12px;margin-top:20px;">Note: This is technical analysis for informational purposes only, not investment advice.</p>
+    </div>
+    """
+
+    chart_html = fig.to_html(full_html=False, include_plotlyjs="cdn")
+    full_html = f"""<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>{asset_name} ({ticker}) — Dashboard</title></head>
+<body style="background:{bg_color};margin:0;">
+{sig_html}
+{chart_html}
+</body></html>"""
+    return full_html
+
+
+
 # ──────────────────────────────────────────────
 # FORMATTERS
 # ──────────────────────────────────────────────
@@ -910,6 +1286,10 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         if analysis.get("last_sma200") is not None:
             fig.add_trace(go.Scatter(x=df["date"], y=analysis["sma200"], name="SMA 200",
                                      line=dict(color="#9c27b0", width=1.8)), row=1, col=1)
+        # EMA 20 (exponential — reacts faster than SMA)
+        ema20_series = df["close"].ewm(span=20, adjust=False).mean().round(2)
+        fig.add_trace(go.Scatter(x=df["date"], y=ema20_series, name="EMA 20",
+                                 line=dict(color="#00bcd4", width=1.5, dash="dash")), row=1, col=1)
 
     # ── Bollinger Bands ──
     if show_bb:
@@ -1236,9 +1616,23 @@ else:
         st.session_state.order_message = None
         st.rerun()
 
-    # Period fixed to 2y (live + historical)
-    st.session_state.period = "5y"
-    st.session_state.interval = "1d"
+    # ── Period / Interval selectors (standalone dashboard style) ──
+    per_col1, per_col2 = st.sidebar.columns(2)
+    with per_col1:
+        period_opts = ["1mo", "3mo", "6mo", "1y", "2y", "5y", "max"]
+        st.session_state.period = st.selectbox("Period", period_opts,
+                                                index=period_opts.index(st.session_state.get("period", "5y")),
+                                                key="period_selector",
+                                                help="1mo=1 month, 5y=5 years, max=all available data")
+    with per_col2:
+        interval_opts = ["1d", "1wk", "1mo"]
+        interval_labels = {"1d": "Daily", "1wk": "Weekly", "1mo": "Monthly"}
+        st.session_state.interval = st.selectbox("Interval", interval_opts,
+                                                   format_func=lambda x: interval_labels.get(x, x),
+                                                   index=interval_opts.index(st.session_state.get("interval", "1d")),
+                                                   key="interval_selector",
+                                                   help="Candle interval: daily, weekly, or monthly")
+
     # ── Fetch data ──
     with st.spinner(f"Fetching real data for {ticker}..."):
         df = fetch_ohlc(ticker, st.session_state.period, st.session_state.interval)
@@ -1257,6 +1651,13 @@ else:
 
     analysis = build_analysis(df)
     last_price = float(df["close"].iloc[-1])
+
+    # ── Enhanced S/R with touch counts ──
+    sr_enhanced = find_support_resistance_enhanced(df)
+    # ── Individual indicator status signals ──
+    indicator_signals = generate_indicator_signals(df)
+    # ── Enhanced candlestick pattern detection (6 candles) ──
+    enhanced_patterns = detect_patterns_enhanced(df)
 
     # -- Compute signal --
     sig = latest_signal(df)
@@ -1421,7 +1822,7 @@ else:
     rsi_text = "Oversold (<30)" if rsi_val < 30 else "Overbought (>70)" if rsi_val > 70 else "Neutral"
     st.markdown(f"""
     <div style="padding:16px 20px;border-radius:12px;background:{sig_color}18;border:2px solid {sig_color};color:{sig_color};font-size:1.05rem;font-weight:600;margin:8px 0;">
-        ▶ SIGNAL: {sig["signal"]} &nbsp;|&nbsp; Price: ₹{sig["close"]:,.2f} &nbsp;|&nbsp; RSI: {rsi_val:.1f} ({rsi_text}) &nbsp;|&nbsp; SMA20: {sig["sma_fast"] or "—"} &nbsp;|&nbsp; SMA50: {sig["sma_slow"] or "—"}
+        ▶ SIGNAL: {sig["signal"]} &nbsp;|&nbsp; Price: ₹{sig["close"]:,.2f} &nbsp;|&nbsp; RSI: {rsi_val:.1f} ({rsi_text}) &nbsp;|&nbsp; SMA20: {sig["sma_fast"] or "—"} &nbsp;|&nbsp; SMA50: {sig["sma_slow"] or "—"} &nbsp;|&nbsp; MACD: {fmt_num(sig.get("macd"))} &nbsp;|&nbsp; EMA20: {fmt_num(round(float(df["close"].ewm(span=20, adjust=False).mean().iloc[-1]), 2))}
     </div>
     """, unsafe_allow_html=True)
     # ── Top metrics row ──
@@ -1458,7 +1859,7 @@ else:
     with col_left:
         st.markdown("#### \U0001f4cb Technical Indicators")
         ind_data = {
-            "Indicator": ["SMA 20", "SMA 50", "RSI (14)", "MACD Line", "MACD Signal",
+            "Indicator": ["SMA 20", "EMA 20", "SMA 50", "RSI (14)", "MACD Line", "MACD Signal",
                           "MACD Histogram", "BB Upper", "BB Lower",
                           "Support (20d low)", "Resistance (20d high)",
                           "Resistance Trend Slope", "Support Trend Slope",
@@ -1468,6 +1869,7 @@ else:
                           "Sortino Ratio", "Skewness", "Kurtosis"],
             "Value": [
                 fmt_num(analysis["last_sma20"]),
+                fmt_num(round(float(df["close"].ewm(span=20, adjust=False).mean().iloc[-1]), 2)),
                 fmt_num(analysis["last_sma50"]),
                 f"{analysis['last_rsi']:.2f}" if analysis["last_rsi"] is not None else "—",
                 fmt_num(analysis["last_macd"]),
@@ -1526,8 +1928,26 @@ else:
         })
         st.dataframe(sig_df, use_container_width=True, hide_index=True)
 
-    # ── TradingView chart with fullscreen (collapsible) ──
+    # ── HTML Dashboard Export ──
     st.markdown("---")
+    exp_col1, exp_col2 = st.columns([3, 1])
+    with exp_col2:
+        if st.button("💾 Download HTML Dashboard", key="html_export", use_container_width=True, type="primary"):
+            html_content = export_html_dashboard(df, ticker, asset["name"], analysis,
+                                                  indicator_signals, sr_enhanced,
+                                                  enhanced_patterns, theme)
+            st.download_button(
+                label="⬇️ Save HTML File",
+                data=html_content,
+                file_name=f"{ticker.replace('.', '_')}_dashboard.html",
+                mime="text/html",
+                use_container_width=True,
+            )
+    with exp_col1:
+        st.caption("Export a standalone interactive HTML dashboard with chart, signals, S/R levels & patterns.")
+
+    # ── TradingView chart with fullscreen (collapsible) ──
+    st.markdown("")
     with st.expander("TradingView Live Chart (native zoom + fullscreen)"):
         fs_col1, fs_col2 = st.columns([4, 1])
         with fs_col2:
