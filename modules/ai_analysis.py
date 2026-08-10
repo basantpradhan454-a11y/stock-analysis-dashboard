@@ -499,16 +499,21 @@ def _render_full_analysis(df, sym=""):
     m5.metric("Trend", "Up" if last_close > last_sma50 > last_sma200 else "Down" if last_close < last_sma50 < last_sma200 else "Mixed")
     m6.metric("Cross", cross_status, "Bullish" if last_sma50 > last_sma200 else "Bearish")
 
+    try:
     # NEW: Golden/Death Cross recent signals
-    if golden_dates or death_dates:
-        st.markdown("**\u2747\ufe0f Recent Golden/Death Cross Signals:**")
-        cross_msgs = []
-        for d in golden_dates:
-            cross_msgs.append(f"\U0001f7e2 Golden Cross on {d.strftime('%Y-%m-%d')} \u2014 SMA50 crossed above SMA200 (Bullish)")
-        for d in death_dates:
-            cross_msgs.append(f"\U0001f534 Death Cross on {d.strftime('%Y-%m-%d')} \u2014 SMA50 crossed below SMA200 (Bearish)")
-        for msg in cross_msgs:
-            st.markdown(f"- {msg}")
+        if golden_dates or death_dates:
+            st.markdown("**\u2747\ufe0f Recent Golden/Death Cross Signals:**")
+            cross_msgs = []
+            for d in golden_dates:
+                cross_msgs.append(f"\U0001f7e2 Golden Cross on {d.strftime('%Y-%m-%d')} \u2014 SMA50 crossed above SMA200 (Bullish)")
+            for d in death_dates:
+                cross_msgs.append(f"\U0001f534 Death Cross on {d.strftime('%Y-%m-%d')} \u2014 SMA50 crossed below SMA200 (Bearish)")
+            for msg in cross_msgs:
+                st.markdown(f"- {msg}")
+    
+    except Exception as cross_err:
+        st.error(f"Golden/Death Cross display error: {type(cross_err).__name__}: {cross_err}")
+        import traceback as _tb; st.text(_tb.format_exc())
 
     try:
         st.markdown(f"#### \U0001f4ca {sym} \u2014 Technical Analysis Chart")
