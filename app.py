@@ -1906,9 +1906,29 @@ else:
         st.dataframe(display_df.tail(30), use_container_width=True, hide_index=True)
 
     with col_right:
-        st.markdown("#### \U0001f50d Candlestick Patterns")
-        for p in analysis["patterns"]:
+        st.markdown("#### \U0001f50d Candlestick Patterns (6-candle scan)")
+        for p in enhanced_patterns:
             st.markdown(f"- {p}")
+
+        st.markdown("#### \U0001f527 Indicator Status (Individual Verdicts)")
+        ind_sig_df = pd.DataFrame(indicator_signals, columns=["Indicator", "Signal", "Value"])
+        st.dataframe(ind_sig_df, use_container_width=True, hide_index=True)
+
+        st.markdown("#### \U0001f4d0 Support/Resistance (Swing-based with Touch Counts)")
+        ns, nr, sl_list, rl_list = sr_enhanced
+        sr_rows = []
+        if nr:
+            sr_rows.append({"Level": "\U0001f534 Nearest Resistance", "Price": f"\u20b9{nr[0]:.2f}", "Touches": nr[1]})
+        if ns:
+            sr_rows.append({"Level": "\U0001f7e2 Nearest Support", "Price": f"\u20b9{ns[0]:.2f}", "Touches": ns[1]})
+        for lvl, touches in (rl_list[1:] if len(rl_list) > 1 else []):
+            sr_rows.append({"Level": "\U0001f534 Resistance", "Price": f"\u20b9{lvl:.2f}", "Touches": touches})
+        for lvl, touches in (sl_list[1:] if len(sl_list) > 1 else []):
+            sr_rows.append({"Level": "\U0001f7e2 Support", "Price": f"\u20b9{lvl:.2f}", "Touches": touches})
+        if sr_rows:
+            st.dataframe(pd.DataFrame(sr_rows), use_container_width=True, hide_index=True)
+        else:
+            st.info("Not enough swing points for clustered S/R levels.")
 
         st.markdown("#### \U0001f4d0 Pivot Points & Trend Lines")
         pv = analysis.get("pivots", {"highs": [], "lows": []})
@@ -1920,13 +1940,14 @@ else:
         if not analysis.get("res_trend") and not analysis.get("sup_trend"):
             st.markdown("- Not enough pivot points for trend lines")
 
-        st.markdown("#### \U0001f4ca Signal Summary")
+        st.markdown("#### \U0001f4ca Signal Summary (Bull/Bear Count)")
         sig_df = pd.DataFrame({
             "Type": ["\U0001f7e2 Bullish", "\U0001f534 Bearish", "\u2696\ufe0f Net"],
             "Count": [analysis["bull_signals"], analysis["bear_signals"],
                       analysis["bull_signals"] - analysis["bear_signals"]],
         })
         st.dataframe(sig_df, use_container_width=True, hide_index=True)
+
 
     # ── HTML Dashboard Export ──
     st.markdown("---")
