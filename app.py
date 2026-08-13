@@ -118,7 +118,7 @@ ASSETS = [
 ]
 
 # ── Navigation Tabs ──
-NAV_TABS = ["Dashboard", "AI Analysis", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Quant Trading", "Portfolio", "Trading Bot"]
+NAV_TABS = ["Dashboard", "Prime Terminal", "AI Analysis", "Fundamental Engine", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Quant Trading", "Portfolio", "Trading Bot"]
 active_tab = st.sidebar.selectbox("Navigate", NAV_TABS, key="nav_tab")
 
 if active_tab != "Dashboard":
@@ -143,6 +143,12 @@ if active_tab != "Dashboard":
     elif active_tab == "AI Analysis":
         from modules.ai_analysis import render_ai_analysis
         render_ai_analysis()
+    elif active_tab == "Prime Terminal":
+        from modules.prime_terminal import render_prime_terminal
+        render_prime_terminal()
+    elif active_tab == "Fundamental Engine":
+        from modules.fundamental_engine_ui import render_fundamental_engine_ui
+        render_fundamental_engine_ui()
     elif active_tab == "Trading Bot":
         from modules.trading_bot import render_trading_bot
         render_trading_bot()
