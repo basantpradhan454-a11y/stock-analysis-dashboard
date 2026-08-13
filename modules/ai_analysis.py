@@ -1002,7 +1002,17 @@ def _run_ai_strategy_backtest(df, sym, strategy_name, risk_rules):
 # ═══ MAIN RENDER ═══
 def render_ai_analysis():
     st.markdown("""<div style="background:linear-gradient(135deg,rgba(2,6,9,0.97),rgba(0,5,20,0.95));border:1px solid rgba(74,158,255,0.25);border-radius:14px;padding:1.2rem 1.5rem;margin-bottom:1rem;"><div style="display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;"><div><div style="font-size:1.1rem;font-weight:800;font-family:Orbitron,monospace;background:linear-gradient(90deg,#4a9eff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">\U0001f9e0 AI Analysis Engine</div><div style="color:#8b949e;font-size:11px;margin-top:2px;">Photo-to-Chart \u00b7 Monte Carlo 30D \u00b7 ML (LR+RF) \u00b7 AI Strategy \u00b7 Golden/Death Cross \u00b7 Candlestick Patterns \u00b7 Full Quant Analysis</div></div></div></div>""", unsafe_allow_html=True)
-    sub_tabs = st.tabs(["\U0001f4f8 Photo \u2192 Chart", "\U0001f4ca Full Analysis", "\U0001f3b2 Monte Carlo 30D", "\U0001f916 ML Prediction"])
+    sub_tabs = st.tabs(["\U0001f4f8 Photo \u2192 Chart", "\U0001f4ca Full Analysis", "\U0001f3b2 Monte Carlo 30D", "\U0001f916 ML Prediction", "\U0001f916 StoxAI Chat", "\U0001f4f8 Chart Vision"])
+
+    # -- StoxAI Chat (from FinSage AI module) --
+    with sub_tabs[4]:
+        from modules.finsage_ai import render_ai_chat
+        render_ai_chat()
+
+    # -- Chart Image Analyzer (from FinSage AI module) --
+    with sub_tabs[5]:
+        from modules.finsage_ai import render_chart_analyzer
+        render_chart_analyzer()
     with sub_tabs[0]: _render_photo_upload()
     with sub_tabs[1]:
         sym = st.text_input("Symbol", value="RELIANCE.NS", placeholder="AAPL, RELIANCE.NS, BTC-USD...", key="ai_analysis_sym")

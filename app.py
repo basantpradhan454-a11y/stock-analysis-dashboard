@@ -118,7 +118,7 @@ ASSETS = [
 ]
 
 # ── Navigation Tabs ──
-NAV_TABS = ["Dashboard", "FinSage AI", "AI Analysis", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Quant Trading", "Portfolio", "Trading Bot"]
+NAV_TABS = ["Dashboard", "AI Analysis", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Quant Trading", "Portfolio", "Trading Bot"]
 active_tab = st.sidebar.selectbox("Navigate", NAV_TABS, key="nav_tab")
 
 if active_tab != "Dashboard":
@@ -140,10 +140,6 @@ if active_tab != "Dashboard":
     elif active_tab == "Portfolio":
         from modules.portfolio_tracker import render_portfolio_tracker
         render_portfolio_tracker()
-    elif active_tab == "FinSage AI":
-        from modules.finsage_ai import render_finsage_ai
-        render_finsage_ai()
-
     elif active_tab == "AI Analysis":
         from modules.ai_analysis import render_ai_analysis
         render_ai_analysis()
