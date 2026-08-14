@@ -178,9 +178,9 @@ def render_backtester():
         fig.add_trace(go.Scatter(x=eq_df.index, y=eq_df["Equity"], name="Strategy", line=dict(color="#00ff88", width=2.5), fill="tozeroy", fillcolor="rgba(0,255,136,0.05)"))
         bh = (result["equity_df"]["Price"] / float(result["equity_df"]["Price"].iloc[0])) * result["initial"]
         fig.add_trace(go.Scatter(x=eq_df.index, y=bh, name="Buy & Hold", line=dict(color="#4a9eff", width=1.5, dash="dot")))
-        fig.update_layout(height=380, margin=dict(l=0,r=0,t=10,b=0), hovermode="x unified", dragmode="pan")
+        fig.update_layout(height=380, margin=dict(l=0,r=0,t=10,b=0), hovermode="x unified", dragmode="zoom")
         st.plotly_chart(fig, use_container_width=True, config={
-            "scrollZoom": True, "displayModeBar": True, "displaylogo": False,
+            "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"], "displayModeBar": True, "displaylogo": False,
             "responsive": True, "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
         })
 

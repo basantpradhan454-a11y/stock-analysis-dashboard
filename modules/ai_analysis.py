@@ -608,7 +608,7 @@ def _render_full_analysis(df, sym=""):
             font=dict(size=10, family="Trebuchet MS, sans-serif"),
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             hovermode="x unified",
-            dragmode="pan",
+            dragmode="zoom",
             xaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across", spikecolor="rgba(150,150,150,0.5)"),
             yaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across", spikecolor="rgba(150,150,150,0.5)"))
         fig.update_xaxes(showgrid=False, showline=True, linecolor="rgba(50,50,50,0.3)")
@@ -618,7 +618,8 @@ def _render_full_analysis(df, sym=""):
         fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
         st.plotly_chart(fig, use_container_width=True, config={
             "scrollZoom": True, "displayModeBar": True, "displaylogo": False, "responsive": True,
-            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
+            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
+            "doubleClick": "reset"})
 
     except Exception as chart_err:
         st.error(f"Chart error: {type(chart_err).__name__}: {chart_err}")
@@ -630,7 +631,7 @@ def _render_full_analysis(df, sym=""):
     st.markdown("#### \U0001f3af Composite Signal Score")
     gcol1, gcol2 = st.columns([1, 2])
     with gcol1:
-        st.plotly_chart(_signal_gauge_chart(signal_score), use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(_signal_gauge_chart(signal_score), use_container_width=True, config={"scrollZoom": True, "displayModeBar": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"], "doubleClick": "reset", "displaylogo": False})
     with gcol2:
         for sig in signal_breakdown:
             icon = "\U0001f7e2" if sig["verdict"] == "bullish" else "\U0001f534" if sig["verdict"] == "bearish" else "\u26aa"
@@ -747,12 +748,13 @@ def _render_monte_carlo(df, sym=""):
     fig.add_trace(go.Scatter(x=list(range(n_days+1)), y=np.percentile(simulations, 5, axis=1), name="5th Pct", line=dict(color="#ef5350", width=2, dash="dash"), fill="tonexty", fillcolor="rgba(38,166,154,0.05)"))
     fig.add_hline(y=last_price, line_dash="solid", line_color="#2962ff", opacity=0.5, annotation_text=f"Current: \u20b9{last_price:.2f}", annotation_position="top left")
     fig.update_layout(template="plotly_dark", height=450, margin=dict(l=50, r=60, t=30, b=30),
+        hovermode="x unified",
         xaxis_title="Days Ahead", yaxis_title="Price (\u20b9)", showlegend=True,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         font=dict(size=10), paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-        dragmode="pan")
-    fig.update_yaxes(side="right", tickformat=".2f"); fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(showgrid=True, gridcolor="rgba(50,50,50,0.2)")
+        dragmode="zoom")
+    fig.update_yaxes(side="right", tickformat=".2f", fixedrange=False, showspikes=True, spikemode="across", spikesnap="cursor", spikecolor="grey", spikethickness=1); fig.update_xaxes(showgrid=False, showspikes=True, spikemode="across", spikesnap="cursor", spikecolor="grey", spikethickness=1)
+    fig.update_yaxes(showgrid=True, gridcolor="rgba(50,50,50,0.2)", fixedrange=False)
     st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
         "displayModeBar": True,
@@ -986,10 +988,11 @@ def _run_ai_strategy_backtest(df, sym, strategy_name, risk_rules):
         fig = go.Figure(); fig.add_trace(go.Scatter(x=df["date"], y=equity, name="Equity",
             line=dict(color="#26a69a", width=2), fill="tozeroy", fillcolor="rgba(38,166,154,0.05)"))
         fig.update_layout(template="plotly_dark", height=300, margin=dict(l=50, r=50, t=20, b=20),
+            hovermode="x unified",
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Date", yaxis_title="Equity (\u20b9)",
-            dragmode="pan")
-        fig.update_yaxes(side="right", tickformat=",.0f"); fig.update_xaxes(showgrid=False)
-        fig.update_yaxes(showgrid=True, gridcolor="rgba(50,50,50,0.2)")
+            dragmode="zoom")
+        fig.update_yaxes(side="right", tickformat=",.0f", fixedrange=False, showspikes=True, spikemode="across", spikesnap="cursor", spikecolor="grey", spikethickness=1); fig.update_xaxes(showgrid=False, showspikes=True, spikemode="across", spikesnap="cursor", spikecolor="grey", spikethickness=1)
+        fig.update_yaxes(showgrid=True, gridcolor="rgba(50,50,50,0.2)", fixedrange=False)
         st.plotly_chart(fig, use_container_width=True, config={
         "scrollZoom": True,
         "displayModeBar": True,

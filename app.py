@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from modules.chart_utils import TV_CHART_CONFIG, TV_LAYOUT_KWARGS, TV_SPIKE_XAXES, TV_SPIKE_YAXES, apply_tv_style
 import io
 import time
 
@@ -906,9 +907,22 @@ def export_html_dashboard(df, ticker, asset_name, analysis, signals, sr_enhanced
         title=f"Technical Analysis Dashboard — {asset_name} ({ticker})",
         xaxis_rangeslider_visible=False,
         template=template,
+        dragmode="zoom",
+        hovermode="x unified",
+        margin=dict(l=10, r=60, t=40, b=10),
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
     )
-    fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])  # skip weekends
+    fig.update_xaxes(
+        rangebreaks=[dict(bounds=["sat", "mon"])],
+        rangeslider_visible=False,
+        showspikes=True, spikemode="across", spikesnap="cursor",
+        spikecolor="grey", spikethickness=1,
+    )
+    fig.update_yaxes(
+        fixedrange=False,
+        showspikes=True, spikemode="across", spikesnap="cursor",
+        spikecolor="grey", spikethickness=1,
+    )
 
     # Signal summary HTML table
     latest = df.iloc[-1]
@@ -1096,10 +1110,10 @@ def equity_curve_chart(equity_curve, theme="dark"):
     fig.update_layout(template=template, height=280,
                       margin=dict(l=50, r=20, t=20, b=30),
                       yaxis_title="Equity", showlegend=False,
-        dragmode="pan",
+        dragmode="zoom", hovermode="x unified",
                       font=dict(size=11), paper_bgcolor=bg_color, plot_bgcolor=bg_color)
-    fig.update_xaxes(showgrid=False)
-    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="rgba(50,50,50,0.3)" if theme == "dark" else "rgba(200,200,200,0.5)")
+    fig.update_xaxes(showgrid=False, showspikes=True, spikemode="across", spikesnap="cursor", spikecolor="grey", spikethickness=1)
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor="rgba(50,50,50,0.3)" if theme == "dark" else "rgba(200,200,200,0.5)", fixedrange=False, showspikes=True, spikemode="across", spikesnap="cursor", spikecolor="grey", spikethickness=1)
     return fig
 
 # ──────────────────────────────────────────────
@@ -1408,16 +1422,17 @@ def candlestick_chart(df, analysis, show_ma, show_bb, show_trend, theme="dark"):
         paper_bgcolor=bg_color,
         plot_bgcolor=bg_color,
         hovermode="x unified",
-        dragmode="pan",
+        dragmode="zoom",
         # TradingView-style crosshair
         xaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across",
-                   spikecolor="rgba(150,150,150,0.5)", showline=True, linecolor=grid_color),
+                   spikecolor="rgba(150,150,150,0.5)", spikesnap="cursor", showline=True, linecolor=grid_color),
         yaxis=dict(showspikes=True, spikethickness=1, spikedash="solid", spikemode="across",
-                   spikecolor="rgba(150,150,150,0.5)", showline=True, linecolor=grid_color, side="right"),
+                   spikecolor="rgba(150,150,150,0.5)", spikesnap="cursor", showline=True, linecolor=grid_color, side="right"),
     )
-    fig.update_xaxes(showgrid=False, showline=True, linecolor=grid_color, mirror=True)
+    fig.update_xaxes(showgrid=False, showline=True, linecolor=grid_color, mirror=True,
+                     rangeslider_visible=False)
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor=grid_color, side="right",
-                     showline=True, linecolor=grid_color, mirror=True)
+                     showline=True, linecolor=grid_color, mirror=True, fixedrange=False)
     fig.update_yaxes(tickformat=".2f", row=1, col=1)
     # Weekend gaps (TradingView style)
     fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
@@ -1785,13 +1800,7 @@ else:
 
         st.caption(f"{bt['total_trades']} total trades simulated. Initial cash: \u20b9{bt['initial_cash']:,.0f}. Historical simulation, not a guarantee of future results.")
 
-        st.plotly_chart(equity_curve_chart(bt["equity_curve"], theme), use_container_width=True, config={
-            "scrollZoom": True,
-            "displayModeBar": True,
-            "displaylogo": False,
-            "responsive": True,
-            "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-        })
+        st.plotly_chart(equity_curve_chart(bt["equity_curve"], theme), use_container_width=True, config=TV_CHART_CONFIG)
 
         if bt["trades"]:
             st.markdown("##### Last 20 Trades")
@@ -1810,14 +1819,7 @@ else:
     st.plotly_chart(
         candlestick_chart(df, analysis, True, True, True, theme),
         use_container_width=True,
-        config={
-            "scrollZoom": True,
-            "displayModeBar": True,
-            "displaylogo": False,
-            "responsive": True,
-            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape", "toggleHover"],
-            "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-        },
+        config=TV_CHART_CONFIG,
     )
 
     # ── Clear trading signal box (TradingView-style) ──
