@@ -499,25 +499,53 @@ hr, .stMarkdown hr {
 """, unsafe_allow_html=True)
 
 # ── 3-Dot HUD Navigation (replaces floating arrows) ──
-st.markdown("""
-<div class="hud-nav-menu">
-  <div class="hud-nav-dots" onclick="document.getElementById('hudPopup').classList.toggle('open')">
-    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+st.components.v1.html("""
+<div id="hudNavMenu" style="position:fixed;top:14px;right:18px;z-index:999999;display:flex;flex-direction:column;align-items:flex-end;">
+  <div id="hudDots" style="display:flex;gap:6px;cursor:pointer;padding:10px 14px;
+       background:rgba(5,7,13,0.9);backdrop-filter:blur(10px);
+       border:1px solid rgba(0,240,255,0.3);
+       clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
+       transition:all 0.25s ease;"
+       onmouseover="this.style.borderColor='#00F0FF';this.style.boxShadow='0 0 12px rgba(0,240,255,0.4)';"
+       onmouseout="this.style.borderColor='rgba(0,240,255,0.3)';this.style.boxShadow='none';"
+       onclick="var p=document.getElementById('hudPopup');p.style.display = (p.style.display==='block')?'none':'block';">
+    <div style="width:5px;height:5px;border-radius:50%;background:#00F0FF;box-shadow:0 0 5px #00F0FF;"></div>
+    <div style="width:5px;height:5px;border-radius:50%;background:#00F0FF;box-shadow:0 0 5px #00F0FF;"></div>
+    <div style="width:5px;height:5px;border-radius:50%;background:#00F0FF;box-shadow:0 0 5px #00F0FF;"></div>
   </div>
-  <div class="hud-nav-popup" id="hudPopup">
-    <a onclick="window.scrollTo({top:0,behavior:'smooth'})">Top</a>
-    <a onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})">Bottom</a>
-    <a onclick="document.getElementById('hudPopup').classList.remove('open')">Close</a>
+  <div id="hudPopup" style="display:none;position:absolute;top:100%;right:0;margin-top:6px;
+       background:rgba(5,7,13,0.95);backdrop-filter:blur(14px);
+       border:1px solid rgba(0,240,255,0.4);min-width:160px;
+       clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);">
+    <div onclick="window.parent.window.scrollTo({top:0,behavior:'smooth'});document.getElementById('hudPopup').style.display='none';"
+         style="padding:11px 16px;font-family:Orbitron,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#C8D4E3;cursor:pointer;border-bottom:1px solid rgba(0,240,255,0.1);transition:all 0.2s;"
+         onmouseover="this.style.background='rgba(0,240,255,0.1)';this.style.color='#00F0FF';this.style.paddingLeft='22px';"
+         onmouseout="this.style.background='none';this.style.color='#C8D4E3';this.style.paddingLeft='16px';">
+      &#9650; Top
+    </div>
+    <div onclick="window.parent.window.scrollTo({top:999999,behavior:'smooth'});document.getElementById('hudPopup').style.display='none';"
+         style="padding:11px 16px;font-family:Orbitron,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#C8D4E3;cursor:pointer;border-bottom:1px solid rgba(0,240,255,0.1);transition:all 0.2s;"
+         onmouseover="this.style.background='rgba(0,240,255,0.1)';this.style.color='#00F0FF';this.style.paddingLeft='22px';"
+         onmouseout="this.style.background='none';this.style.color='#C8D4E3';this.style.paddingLeft='16px';">
+      &#9660; Bottom
+    </div>
+    <div onclick="document.getElementById('hudPopup').style.display='none';"
+         style="padding:11px 16px;font-family:Orbitron,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#FF3B5C;cursor:pointer;transition:all 0.2s;"
+         onmouseover="this.style.background='rgba(255,59,92,0.1)';this.style.paddingLeft='22px';"
+         onmouseout="this.style.background='none';this.style.paddingLeft='16px';">
+      &#10005; Close
+    </div>
   </div>
 </div>
 <script>
   document.addEventListener('click', function(e) {
-    if (!e.target.closest('.hud-nav-menu')) {
-      document.getElementById('hudPopup').classList.remove('open');
+    if (!e.target.closest('#hudNavMenu')) {
+      var p = document.getElementById('hudPopup');
+      if (p) p.style.display = 'none';
     }
   });
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
 
 # ──────────────────────────────────────────────
 # ──────────────────────────────────────────────
