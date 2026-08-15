@@ -48,7 +48,7 @@ def render_risk_calculator():
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Risk Amount", f"\u20b9{risk_amount:,.2f}")
         m2.metric("Risk per Share", f"\u20b9{per_share_risk:.2f}")
-        m3.metric("Max Position", f"{max_shares:,} shares")
+        m3.metric("Max Position", f"{max_shares:} shares")
         m4.metric("Position Value", f"\u20b9{position_value:,.2f}", f"{position_pct:.1f}% of capital")
         
         # Risk reward
@@ -134,8 +134,7 @@ def render_option_pricer():
     greeks_df = pd.DataFrame({
         "Greek": ["Price", "Delta", "Gamma", "Vega (per 1%)", "Theta (per day)", "Rho (per 1%)"],
         "Call": [f"\u20b9{call_price:.2f}", f"{call_d:.4f}", f"{call_g:.6f}", f"{call_v:.4f}", f"{call_th:.4f}", f"{call_rho:.4f}"],
-        "Put": [f"\u20b9{put_price:.2f}", f"{put_d:.4f}", f"{put_g:.6f}", f"{put_v:.4f}", f"{put_th:.4f}", f"{put_rho:.4f}"],
-    })
+        "Put": [f"\u20b9{put_price:.2f}", f"{put_d:.4f}", f"{put_g:.6f}", f"{put_v:.4f}", f"{put_th:.4f}", f"{put_rho:.4f}"]})
     st.dataframe(greeks_df, use_container_width=True, hide_index=True)
     
     # Payoff diagram
@@ -151,12 +150,11 @@ def render_option_pricer():
     fig.add_vline(x=K, line=dict(color="#3b82f6", width=1, dash="dot"), name="Strike")
     fig.update_layout(height=350, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Spot at Expiry", yaxis_title="P&L", dragmode="zoom", hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -195,12 +193,11 @@ def render_correlation():
         ))
         fig.update_layout(height=450, margin=dict(l=0,r=0,t=10,b=0), dragmode="zoom", hovermode="x unified")
         st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
         
         st.dataframe(corr.style.background_gradient(cmap="RdYlGn", vmin=-1, vmax=1), use_container_width=True)
 
@@ -269,12 +266,11 @@ def render_monte_carlo():
         fig.add_trace(go.Scatter(x=list(range(days+1)), y=p90_path, name=f"{confidence}% High", line=dict(color="#22c55e", width=2)))
         fig.update_layout(height=400, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Days", yaxis_title="Price", dragmode="zoom", hovermode="x unified")
         st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -375,12 +371,11 @@ def render_factor_exposure():
         fig.update_layout(height=400, margin=dict(l=0,r=0,t=10,b=0), dragmode="zoom", hovermode="x unified", xaxis=dict(range=[-1, 1], gridcolor="#2a3441"),
                           yaxis=dict(gridcolor="#2a3441"))
         st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
     
     # Summary
     positive = sum(1 for v in factor_vals if v > 0)
@@ -445,8 +440,7 @@ def render_quant_screener():
                     "Symbol": sym, "Price": round(last_close, 2), "RSI": round(last_rsi, 1),
                     "MACD": "Bull" if last_macd > last_signal else "Bear",
                     "Trend": "Up" if last_sma20 > last_sma50 else "Down",
-                    "Signal": action, "Score": bull,
-                })
+                    "Signal": action, "Score": bull})
             except Exception:
                 pass
         
@@ -514,12 +508,11 @@ def render_pnl_calendar():
     fig.add_trace(go.Bar(x=dates, y=daily_pnl, name="Daily P&L", marker_color=colors))
     fig.update_layout(height=300, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Date", yaxis_title="Daily P&L", dragmode="zoom", hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
     
     # Cumulative P&L line
     fig2 = go.Figure()
@@ -529,12 +522,11 @@ def render_pnl_calendar():
     fig2.add_hline(y=0, line=dict(color="#8b949e", width=1, dash="dash"))
     fig2.update_layout(height=250, margin=dict(l=0,r=0,t=10,b=0), xaxis_title="Date", yaxis_title="Cumulative P&L", dragmode="zoom", hovermode="x unified")
     st.plotly_chart(fig2, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
     
     # Calendar table
     st.markdown("### Daily Breakdown")

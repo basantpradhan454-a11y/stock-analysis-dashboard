@@ -5,9 +5,7 @@ TV_CHART_CONFIG = {
     "scrollZoom": True,
     "displayModeBar": True,
     "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawcircle", "drawrect", "eraseshape"],
-    "doubleClick": "reset",
-    "displaylogo": False,
-}
+    "displaylogo": False}
 
 # Shared update_layout kwargs — TradingView-style
 TV_LAYOUT_KWARGS = dict(

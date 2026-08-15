@@ -20,25 +20,277 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        "About": "📊 Quant Desk — Stock Analysis Dashboard\nBuilt with Streamlit + Plotly + yfinance\nFor educational purposes only — not financial advice.",
-    },
+        "About": "📊 Quant Desk — Stock Analysis Dashboard\nBuilt with Streamlit + Plotly + yfinance\nFor educational purposes only — not financial advice."},
 )
 # Hide GitHub deploy button only (3-dots menu stays visible)
 st.markdown("""
 <style>
+/* ═══ FUTURISTIC GLASSMORPHISM UI ═══ */
+
+/* ── Global: transparent glass theme ── */
 .stDeployButton {display: none !important;}
-/* Fix Plotly chart zoom - prevent double-tap, enable smooth scroll/pinch */
+
+.stApp {
+    background: linear-gradient(135deg, #0a0e17 0%, #0d1117 40%, #101522 100%) !important;
+}
+
+/* Main container — transparent */
+.stMain, .stMain > section, [data-testid="stMain"] {
+    background: transparent !important;
+}
+
+/* ── Glassmorphism panels ── */
+.stMetric, [data-testid="stMetric"] {
+    background: rgba(16, 21, 33, 0.6) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(74, 158, 255, 0.12) !important;
+    border-radius: 12px !important;
+    padding: 14px 16px !important;
+    transition: all 0.3s ease !important;
+}
+.stMetric:hover {
+    border-color: rgba(74, 158, 255, 0.35) !important;
+    box-shadow: 0 4px 20px rgba(74, 158, 255, 0.1) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ── Sidebar: glass effect ── */
+section[data-testid="stSidebar"] {
+    background: rgba(10, 14, 23, 0.85) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-right: 1px solid rgba(74, 158, 255, 0.15) !important;
+}
+section[data-testid="stSidebar"] > div {
+    padding-top: 1rem !important;
+}
+
+/* ── Buttons: futuristic glass + neon glow ── */
+.stButton > button {
+    background: rgba(20, 26, 38, 0.7) !important;
+    backdrop-filter: blur(10px) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(74, 158, 255, 0.2) !important;
+    border-radius: 10px !important;
+    color: #e6edf3 !important;
+    font-weight: 600 !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+}
+.stButton > button:hover {
+    background: rgba(30, 40, 60, 0.8) !important;
+    border-color: rgba(74, 158, 255, 0.5) !important;
+    box-shadow: 0 4px 16px rgba(74, 158, 255, 0.15) !important;
+    transform: translateY(-1px) !important;
+}
+.stButton > button:active {
+    transform: translateY(0px) !important;
+}
+/* Primary button — neon blue glow */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, rgba(59,130,246,0.3), rgba(74,158,255,0.2)) !important;
+    border: 1px solid rgba(74,158,255,0.4) !important;
+    box-shadow: 0 0 12px rgba(74,158,255,0.2), 0 2px 8px rgba(0,0,0,0.3) !important;
+}
+.stButton > button[kind="primary"]:hover {
+    box-shadow: 0 0 20px rgba(74,158,255,0.35), 0 4px 16px rgba(74,158,255,0.15) !important;
+}
+
+/* ── Floating Action Buttons (bottom-right) ── */
+.floating-actions {
+    position: fixed !important;
+    bottom: 20px !important;
+    right: 20px !important;
+    z-index: 9999 !important;
+    display: flex !important;
+    flex-direction: column-reverse !important;
+    gap: 10px !important;
+}
+.fab-btn {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    background: rgba(20, 26, 38, 0.85) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(74, 158, 255, 0.3) !important;
+    color: #e6edf3 !important;
+    font-size: 20px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
+}
+.fab-btn:hover {
+    transform: scale(1.1) !important;
+    border-color: rgba(74,158,255,0.6) !important;
+    box-shadow: 0 0 16px rgba(74,158,255,0.3) !important;
+}
+
+/* ── Inputs: glass style ── */
+.stTextInput > div > div > input,
+.stSelectbox > div > div > div {
+    background: rgba(16, 21, 33, 0.6) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(74, 158, 255, 0.15) !important;
+    border-radius: 10px !important;
+    color: #e6edf3 !important;
+}
+.stTextInput > div > div > input:focus {
+    border-color: rgba(74, 158, 255, 0.4) !important;
+    box-shadow: 0 0 8px rgba(74, 158, 255, 0.15) !important;
+}
+.stTextInput > div > div > input::placeholder {
+    color: #6e7681 !important;
+}
+
+/* ── Dataframes: transparent ── */
+.stDataFrame {
+    background: rgba(16, 21, 33, 0.4) !important;
+    border: 1px solid rgba(74, 158, 255, 0.1) !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+}
+.stDataFrame [data-testid="stDataFrameResizable"] {
+    background: transparent !important;
+}
+
+/* ── Info/Success/Error boxes: glass ── */
+.stAlert, .stInfo, .stSuccess, .stError, .stWarning {
+    background: rgba(16, 21, 33, 0.5) !important;
+    backdrop-filter: blur(8px) !important;
+    border: 1px solid rgba(74, 158, 255, 0.15) !important;
+    border-radius: 10px !important;
+}
+
+/* ── Expanders: glass ── */
+.streamlit-expanderHeader {
+    background: rgba(20, 26, 38, 0.5) !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+}
+
+/* ── Headings: futuristic gradient text ── */
+h1, h2, h3 {
+    background: linear-gradient(90deg, #e6edf3, #8b949e) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    font-weight: 700 !important;
+}
+
+/* ── Captions ── */
+.stCaption, p[data-testid="stCaption"] {
+    color: #6e7681 !important;
+    font-size: 12px !important;
+}
+
+/* ── Plotly modebar: transparent floating ── */
+.modebar {
+    background: rgba(16, 21, 33, 0.7) !important;
+    backdrop-filter: blur(8px) !important;
+    border-radius: 8px !important;
+    padding: 4px !important;
+    border: 1px solid rgba(74, 158, 255, 0.1) !important;
+}
+.modebar-btn {
+    color: #8b949e !important;
+}
+.modebar-btn:hover {
+    background: rgba(74, 158, 255, 0.15) !important;
+    color: #e6edf3 !important;
+}
+.modebar-btn.active {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+}
+
+/* ── Fix Plotly chart zoom ── */
 .js-plotly-plot .plot-container,
 .js-plotly-plot .svg-container {
     touch-action: none !important;
 }
-.modebar-btn[data-val="zoomIn2d"], .modebar-btn[data-val="zoomOut2d"] {
-    display: none !important;
+
+/* ── Scrollbar: futuristic ── */
+::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
 }
-/* Better Plotly modebar styling */
-.modebar {background: transparent !important;}
-.modebar-btn.active {background-color: rgba(59,130,246,0.2) !important;}
+::-webkit-scrollbar-track {
+    background: rgba(10, 14, 23, 0.5) !important;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(74, 158, 255, 0.3) !important;
+    border-radius: 4px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(74, 158, 255, 0.5) !important;
+}
+
+/* ── Tab borders: transparent ── */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 4px !important;
+}
+.stTabs [data-baseweb="tab"] {
+    background: rgba(16, 21, 33, 0.4) !important;
+    backdrop-filter: blur(8px) !important;
+    border-radius: 8px 8px 0 0 !important;
+    border: 1px solid rgba(74, 158, 255, 0.1) !important;
+    padding: 8px 16px !important;
+}
+
+/* ── Signal badge glow ── */
+.signal-glow-buy {
+    box-shadow: 0 0 12px rgba(12, 163, 12, 0.3) !important;
+}
+.signal-glow-sell {
+    box-shadow: 0 0 12px rgba(208, 59, 59, 0.3) !important;
+}
+
+/* ── Divider: gradient line ── */
+hr, .stMarkdown hr {
+    border: none !important;
+    height: 1px !important;
+    background: linear-gradient(90deg, transparent, rgba(74, 158, 255, 0.2), transparent) !important;
+}
+
+/* ── Asset cards: glass hover ── */
+.asset-card {
+    background: rgba(16, 21, 33, 0.6) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(74, 158, 255, 0.1) !important;
+    border-radius: 12px !important;
+    padding: 12px !important;
+    transition: all 0.3s ease !important;
+    cursor: pointer !important;
+}
+.asset-card:hover {
+    border-color: rgba(74, 158, 255, 0.35) !important;
+    box-shadow: 0 4px 20px rgba(74, 158, 255, 0.1) !important;
+    transform: translateY(-2px) !important;
+}
+
+/* ── Animated gradient header ── */
+@keyframes shimmer {
+    0% { background-position: -200% center; }
+    100% { background-position: 200% center; }
+}
+.futuristic-title {
+    background: linear-gradient(90deg, #3d8bfd, #00c853, #3d8bfd);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 3s linear infinite;
+}
 </style>
+""", unsafe_allow_html=True)
+
+# ── Floating Action Buttons (inject HTML) ──
+st.markdown("""
+<div class="floating-actions">
+    <div class="fab-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Scroll to Top">↑</div>
+    <div class="fab-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" title="Scroll to Bottom">↓</div>
+</div>
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────
@@ -501,8 +753,7 @@ def build_analysis(df):
         "hist": hist, "bb_upper_series": bb_upper, "bb_lower_series": bb_lower, "bb_mid_series": bb_mid,
         "res_trend": res_trend, "sup_trend": sup_trend,
         "res_trend_vals": res_trend_vals, "sup_trend_vals": sup_trend_vals,
-        "pivots": pivots,
-    }
+        "pivots": pivots}
 
 # ──────────────────────────────────────────────
 # AI ANALYSIS (quant + technical + summary)
@@ -593,9 +844,7 @@ def compute_ai_summary(df):
             "volatility_pct": round(volatility, 2),
             "sharpe": round(sharpe, 2),
             "period_high": period_high,
-            "period_low": period_low,
-        },
-    }
+            "period_low": period_low}}
 
 
 # ──────────────────────────────────────────────
@@ -1029,8 +1278,7 @@ def latest_signal(df):
         "sma_slow": round(float(last["sma_slow"]), 2) if not pd.isna(last["sma_slow"]) else None,
         "rsi": round(float(last["rsi_sig"]), 2) if not pd.isna(last["rsi_sig"]) else None,
         "macd": round(float(last["macd_sig"]), 4) if not pd.isna(last["macd_sig"]) else None,
-        "macd_signal": round(float(last["macd_sig_signal"]), 4) if not pd.isna(last["macd_sig_signal"]) else None,
-    }
+        "macd_signal": round(float(last["macd_sig_signal"]), 4) if not pd.isna(last["macd_sig_signal"]) else None}
 
 # ──────────────────────────────────────────────
 # BACKTESTER
@@ -1092,8 +1340,7 @@ def run_backtest(df, initial_cash=100000.0, qty_per_trade=10):
         "total_trades": len(trades),
         "win_rate_pct": win_rate,
         "trades": trades[-20:],
-        "equity_curve": equity_curve,
-    }
+        "equity_curve": equity_curve}
 
 def equity_curve_chart(equity_curve, theme="dark"):
     """Plotly chart for backtest equity curve."""
@@ -1127,8 +1374,7 @@ def place_order_simulated(ticker, side, qty=10):
     if SANDBOX_MODE:
         return {
             "status": "SIMULATED",
-            "message": f"[SANDBOX] Would {side} {qty} of {ticker} (MARKET). No real order placed.",
-        }
+            "message": f"[SANDBOX] Would {side} {qty} of {ticker} (MARKET). No real order placed."}
     return {"status": "ERROR", "message": "Live trading not implemented."}
 
 def fmt_vol(n):
@@ -1567,8 +1813,7 @@ else:
                 "broker_id": selected_broker_id,
                 "name": broker_meta["name"],
                 "connected_at": time.strftime("%H:%M:%S"),
-                "mode": "demo",
-            }
+                "mode": "demo"}
             st.session_state.credentials = credentials
             st.sidebar.success(f"✅ Connected to {broker_meta['name']} (Demo)")
             st.rerun()
@@ -1579,7 +1824,7 @@ st.sidebar.caption("📊 Quant Desk — Real data via yfinance. Not financial ad
 # ──────────────────────────────────────────────
 
 if st.session_state.selected_asset is None:
-    st.markdown("## \U0001f4ca Quant Desk")
+    st.markdown('<h1 class="futuristic-title">📊 Quant Desk</h1>', unsafe_allow_html=True)
     st.markdown("### Watchlist \u2014 Chart kholne ke liye ek asset chuniye")
     st.markdown("")
 
@@ -1688,7 +1933,7 @@ else:
     # -- Header --
     col_title, col_signal, col_badge, col_price = st.columns([3, 1, 1, 1])
     with col_title:
-        st.markdown(f"## \U0001f4ca {ticker} \u2014 {asset['name']}")
+        st.markdown(f'<h2 class="futuristic-title">📊 {ticker} — {asset["name"]}</h2>', unsafe_allow_html=True)
         st.caption(f"{asset['type']} \u00b7 Data via yfinance \u00b7 {st.session_state.period} / {st.session_state.interval}")
     with col_signal:
         st.markdown(f"""
@@ -1899,8 +2144,7 @@ else:
                 f"{analysis.get('sortino', 0)}",
                 f"{analysis.get('skewness', 0)}",
                 f"{analysis.get('kurtosis', 0)}",
-            ],
-        }
+            ]}
         st.dataframe(pd.DataFrame(ind_data), use_container_width=True, hide_index=True)
 
         # Raw data table
@@ -1952,8 +2196,7 @@ else:
         sig_df = pd.DataFrame({
             "Type": ["\U0001f7e2 Bullish", "\U0001f534 Bearish", "\u2696\ufe0f Net"],
             "Count": [analysis["bull_signals"], analysis["bear_signals"],
-                      analysis["bull_signals"] - analysis["bear_signals"]],
-        })
+                      analysis["bull_signals"] - analysis["bear_signals"]]})
         st.dataframe(sig_df, use_container_width=True, hide_index=True)
 
 

@@ -180,8 +180,7 @@ def _signal_gauge_chart(score):
                 {"range": [35, 65], "color": "rgba(255,152,0,0.25)"},
                 {"range": [65, 100], "color": "rgba(38,166,154,0.30)"},
             ],
-            "threshold": {"line": {"color": "#fff", "width": 3}, "thickness": 0.85, "value": score},
-        },
+            "threshold": {"line": {"color": "#fff", "width": 3}, "thickness": 0.85, "value": score}},
     ))
     fig.update_layout(height=220, margin=dict(l=20, r=20, t=50, b=10),
                        paper_bgcolor="rgba(0,0,0,0)", font={"color": "#c9d1d9"})
@@ -196,8 +195,7 @@ def _fibonacci_levels(df, lookback=100):
     return {
         "0.0%": swing_high, "23.6%": swing_high - 0.236 * diff,
         "38.2%": swing_high - 0.382 * diff, "50.0%": swing_high - 0.5 * diff,
-        "61.8%": swing_high - 0.618 * diff, "100.0%": swing_low,
-    }
+        "61.8%": swing_high - 0.618 * diff, "100.0%": swing_low}
 
 def _find_support_resistance(df, window=20):
     highs = df["high"].rolling(window, center=True).max()
@@ -311,8 +309,7 @@ def _returns_stats(returns):
         "Annualized Volatility": std_r * np.sqrt(252),
         "Skewness": skew,
         "Kurtosis": kurt,
-        "Annualized Return": (1 + mean_r) ** 252 - 1,
-    }
+        "Annualized Return": (1 + mean_r) ** 252 - 1}
 
 
 # ── NEW: Simple Random Forest (pure numpy decision trees) ──
@@ -357,8 +354,7 @@ def _build_tree(X, y, feature_indices, depth=0, max_depth=5, min_samples=5):
     return {
         "leaf": False, "feat": feat, "thresh": thresh,
         "left": _build_tree(X[left_mask], y[left_mask], feature_indices, depth+1, max_depth, min_samples),
-        "right": _build_tree(X[~left_mask], y[~left_mask], feature_indices, depth+1, max_depth, min_samples),
-    }
+        "right": _build_tree(X[~left_mask], y[~left_mask], feature_indices, depth+1, max_depth, min_samples)}
 
 def _predict_tree(tree, X):
     if tree["leaf"]:
@@ -618,8 +614,7 @@ def _render_full_analysis(df, sym=""):
         fig.update_xaxes(rangebreaks=[dict(bounds=["sat", "mon"])])
         st.plotly_chart(fig, use_container_width=True, config={
             "scrollZoom": True, "displayModeBar": True, "displaylogo": False, "responsive": True,
-            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-            "doubleClick": "reset"})
+            "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
     except Exception as chart_err:
         st.error(f"Chart error: {type(chart_err).__name__}: {chart_err}")
@@ -631,7 +626,7 @@ def _render_full_analysis(df, sym=""):
     st.markdown("#### \U0001f3af Composite Signal Score")
     gcol1, gcol2 = st.columns([1, 2])
     with gcol1:
-        st.plotly_chart(_signal_gauge_chart(signal_score), use_container_width=True, config={"scrollZoom": True, "displayModeBar": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"], "doubleClick": "reset", "displaylogo": False})
+        st.plotly_chart(_signal_gauge_chart(signal_score), use_container_width=True, config={"scrollZoom": True, "displayModeBar": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"], "displaylogo": False})
     with gcol2:
         for sig in signal_breakdown:
             icon = "\U0001f7e2" if sig["verdict"] == "bullish" else "\U0001f534" if sig["verdict"] == "bearish" else "\u26aa"
@@ -655,8 +650,7 @@ def _render_full_analysis(df, sym=""):
                 "Hammer": "\U0001f7e2 Hammer \u2014 bullish reversal signal",
                 "Shooting Star": "\U0001f534 Shooting Star \u2014 bearish reversal signal",
                 "Bullish Engulfing": "\U0001f7e2 Bullish Engulfing \u2014 buyers overwhelming sellers",
-                "Bearish Engulfing": "\U0001f534 Bearish Engulfing \u2014 sellers overwhelming sellers",
-            }
+                "Bearish Engulfing": "\U0001f534 Bearish Engulfing \u2014 sellers overwhelming sellers"}
             for idx, pats in detected.items():
                 try:
                     dt = df["date"].iloc[int(idx)] if isinstance(idx, (int, np.integer)) else pd.Timestamp(idx)
@@ -760,8 +754,7 @@ def _render_monte_carlo(df, sym=""):
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
 
 # ═══ 4. ML PREDICTION (Logistic Regression + Random Forest) ═══
@@ -868,8 +861,7 @@ def _render_ml_prediction(df, sym=""):
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
     st.caption("\u26a0\ufe0f ML predictions are based on historical patterns. NOT financial advice. Use for education only.")
 
@@ -998,8 +990,7 @@ def _run_ai_strategy_backtest(df, sym, strategy_name, risk_rules):
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToAdd": ["drawline", "drawopenpath", "drawrect", "drawcircle", "drawarrow", "eraseshape"], "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
 
 # ═══ MAIN RENDER ═══

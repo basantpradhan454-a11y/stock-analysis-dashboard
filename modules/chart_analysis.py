@@ -19,8 +19,7 @@ PATTERN_LIBRARY: Dict[str, Dict[str, str]] = {
     "three_white_soldiers": {"name":"Three White Soldiers","bias":"bullish","definition":"3 consecutive big green candles. Strong sustained buying."},
     "three_black_crows": {"name":"Three Black Crows","bias":"bearish","definition":"3 consecutive big red candles. Strong sustained selling."},
     "piercing_line": {"name":"Piercing Line","bias":"bullish","definition":"Red candle then green closing above prior midpoint. Bullish reversal."},
-    "dark_cloud_cover": {"name":"Dark Cloud Cover","bias":"bearish","definition":"Green candle then red closing below prior midpoint. Bearish reversal."},
-}
+    "dark_cloud_cover": {"name":"Dark Cloud Cover","bias":"bearish","definition":"Green candle then red closing below prior midpoint. Bearish reversal."}}
 
 CONCEPT_LIBRARY: Dict[str, str] = {
     "support":"Support is a price level where buying is strong enough to stop price from falling. Like a floor.",
@@ -30,8 +29,7 @@ CONCEPT_LIBRARY: Dict[str, str] = {
     "macd":"MACD shows difference of two moving averages. Cross above signal = bullish, below = bearish.",
     "trend":"Trend is overall direction. Higher highs + higher lows = uptrend. Lower = downtrend.",
     "moving_average":"MA is a smooth line of average price. Price above MA = bullish bias.",
-    "candlestick":"A candle shows Open, High, Low, Close for a time period. Body + wicks show market psychology.",
-}
+    "candlestick":"A candle shows Open, High, Low, Close for a time period. Body + wicks show market psychology."}
 
 def compute_indicators(df):
     df = df.copy()

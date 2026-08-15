@@ -27,8 +27,7 @@ CATEGORIES = [
             ("meanrevert", "Mean reversion signal"),
             ("trend", "Trend / momentum signal"),
             ("random", "Random walk (ML sim)"),
-        ],
-    },
+        ]},
     {
         "id": "dir",
         "name": "Directional",
@@ -43,8 +42,7 @@ CATEGORIES = [
             ("meanrevert", "Mean reversion signal"),
             ("trend", "Trend / momentum signal"),
             ("random", "Random walk (ML sim)"),
-        ],
-    },
+        ]},
     {
         "id": "sys",
         "name": "Systematic / ML",
@@ -59,8 +57,7 @@ CATEGORIES = [
             ("meanrevert", "Mean reversion signal"),
             ("trend", "Trend / momentum signal"),
             ("random", "Random walk (ML sim)"),
-        ],
-    },
+        ]},
 ]
 
 

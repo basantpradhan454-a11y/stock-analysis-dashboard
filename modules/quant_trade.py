@@ -268,12 +268,11 @@ def _render_overview():
         dragmode="zoom", hovermode="x unified",
                       font=dict(color="#e6edf3"), xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
     # Drawdown
     st.markdown("#### Drawdown")
@@ -284,12 +283,11 @@ def _render_overview():
         dragmode="zoom", hovermode="x unified",
                        font=dict(color="#e6edf3"), xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig2, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -354,12 +352,11 @@ def _render_backtest():
         dragmode="zoom", hovermode="x unified",
                           font=dict(color="#e6edf3"), xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
         st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
         if trades:
             st.markdown("#### Trade History")
@@ -387,7 +384,7 @@ def _render_riskcalc():
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Risk Amount", f"\u20b9{risk_amt:,.2f}")
         m2.metric("Risk/Share", f"\u20b9{per_share:.2f}")
-        m3.metric("Max Position", f"{shares:,} shares")
+        m3.metric("Max Position", f"{shares:} shares")
         m4.metric("Position Value", f"\u20b9{pos_val:,.2f}")
 
         target = st.number_input("Target Price", value=110.0, step=0.5, format="%.2f", key="qt_rc_target")
@@ -452,8 +449,7 @@ def _render_optionpricer():
     gdf = pd.DataFrame({
         "Greek": ["Price", "Delta", "Gamma", "Vega (1%)", "Theta (day)", "Rho (1%)"],
         "Call": [f"\u20b9{cp:.2f}", f"{cd:.4f}", f"{cg:.6f}", f"{cv:.4f}", f"{ct:.4f}", f"{cr:.4f}"],
-        "Put": [f"\u20b9{pp:.2f}", f"{pd:.4f}", f"{pg:.6f}", f"{pv:.4f}", f"{pt:.4f}", f"{pr:.4f}"],
-    })
+        "Put": [f"\u20b9{pp:.2f}", f"{pd:.4f}", f"{pg:.6f}", f"{pv:.4f}", f"{pt:.4f}", f"{pr:.4f}"]})
     st.dataframe(gdf, use_container_width=True, hide_index=True)
 
     # Payoff
@@ -468,12 +464,11 @@ def _render_optionpricer():
         dragmode="zoom", hovermode="x unified",
                       xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -505,12 +500,11 @@ def _render_correlation():
                                    text=corr.values.round(2), texttemplate="%{text}", textfont=dict(size=10)))
         fig.update_layout(height=450, margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor="#151b23", font=dict(color="#e6edf3"))
         st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -570,12 +564,11 @@ def _render_montecarlo():
         dragmode="zoom", hovermode="x unified",
                           xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
         st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -674,12 +667,11 @@ def _render_factor():
         dragmode="zoom", hovermode="x unified",
                           yaxis=dict(gridcolor="#2a3441"))
         st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
     pos = sum(1 for v in vals if v > 0)
     neg = sum(1 for v in vals if v < 0)
@@ -794,12 +786,11 @@ def _render_positions():
         dragmode="zoom", hovermode="x unified",
                       xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -836,12 +827,11 @@ def _render_pnlcal():
         dragmode="zoom", hovermode="x unified",
                       xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
     fig2 = go.Figure(go.Scatter(x=dates, y=cum_pnl, line=dict(color="#3b82f6", width=2), fill="tozeroy", fillcolor="rgba(59,130,246,0.1)"))
     fig2.add_hline(y=0, line=dict(color="#8b949e", width=1, dash="dash"))
@@ -850,12 +840,11 @@ def _render_pnlcal():
         dragmode="zoom", hovermode="x unified",
                        xaxis=dict(gridcolor="#2a3441"), yaxis=dict(gridcolor="#2a3441"))
     st.plotly_chart(fig2, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -874,8 +863,7 @@ RENDERERS = {
     "factor": _render_factor,
     "screenerquant": _render_screener_quant,
     "positions": _render_positions,
-    "pnlcal": _render_pnlcal,
-}
+    "pnlcal": _render_pnlcal}
 
 
 def render_quant_trade():

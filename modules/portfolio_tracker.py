@@ -18,15 +18,13 @@ GECKO_IDS = {
     "XRP":"ripple","ADA":"cardano","AVAX":"avalanche-2","MATIC":"matic-network",
     "DOGE":"dogecoin","SHIB":"shiba-inu","PEPE":"pepe","FLOKI":"floki",
     "BONK":"bonk","WIF":"dogwifcoin","LINK":"chainlink","DOT":"polkadot",
-    "ATOM":"cosmos","UNI":"uniswap","LTC":"litecoin","BCH":"bitcoin-cash",
-}
+    "ATOM":"cosmos","UNI":"uniswap","LTC":"litecoin","BCH":"bitcoin-cash"}
 
 ASSET_CATEGORIES = {
     "NSE India": [("RELIANCE","RELIANCE.NS"),("TCS","TCS.NS"),("INFY","INFY.NS"),("HDFC Bank","HDFCBANK.NS"),("ICICI Bank","ICICIBANK.NS"),("WIPRO","WIPRO.NS"),("ADANI ENT","ADANIENT.NS"),("BAJFINANCE","BAJFINANCE.NS")],
     "US Stocks": [("Apple","AAPL"),("Tesla","TSLA"),("NVIDIA","NVDA"),("Google","GOOGL"),("Microsoft","MSFT"),("Amazon","AMZN"),("Meta","META"),("Netflix","NFLX")],
     "Crypto": [("Bitcoin","BTC"),("Ethereum","ETH"),("BNB","BNB"),("Solana","SOL"),("XRP","XRP"),("ADA","ADA"),("AVAX","AVAX"),("DOGE","DOGE")],
-    "Meme": [("SHIB","SHIB"),("PEPE","PEPE"),("FLOKI","FLOKI"),("BONK","BONK"),("WIF","WIF")],
-}
+    "Meme": [("SHIB","SHIB"),("PEPE","PEPE"),("FLOKI","FLOKI"),("BONK","BONK"),("WIF","WIF")]}
 
 def _get_live_price(sym):
     sym_up = sym.upper().replace("-USD","").replace("-USDT","")
@@ -116,23 +114,21 @@ def render_portfolio_tracker():
                 fig = go.Figure(go.Pie(labels=df["Symbol"], values=df["Current Val"], hole=0.45))
                 fig.update_layout(height=280, margin=dict(l=0,r=0,t=0,b=0), dragmode="zoom", hovermode="x unified")
                 st.plotly_chart(fig, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
             with c2:
                 colors = ["#00ff88" if v>=0 else "#ff4466" for v in df["P&L ($)"]]
                 fig2 = go.Figure(go.Bar(x=df["Symbol"], y=df["P&L ($)"], marker_color=colors))
                 fig2.update_layout(height=280, margin=dict(l=0,r=0,t=10,b=0), showlegend=False, dragmode="zoom", hovermode="x unified")
                 st.plotly_chart(fig2, use_container_width=True, config={
-        "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"],
+        "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"],
         "displayModeBar": True,
         "displaylogo": False,
         "responsive": True,
-        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-    })
+        "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
     with tab_add:
         st.markdown("#### Add or Sell a Position")

@@ -105,8 +105,7 @@ def _call_groq(messages):
                 "model": "llama-3.3-70b-versatile",
                 "messages": messages,
                 "max_tokens": 1400,
-                "temperature": 0.6,
-            },
+                "temperature": 0.6},
             timeout=40,
         )
         if resp.status_code == 200:
@@ -170,11 +169,11 @@ def _render_trade_card(trade):
     </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0.4rem;margin-bottom:0.9rem;">
-    <div style="background:rgba(0,242,254,0.07);border:1px solid rgba(0,242,254,0.2);border-radius:10px;padding:0.55rem 0.4rem;text-align:center;"><div style="color:#64748B;font-size:0.58rem;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Entry</div><div style="color:#00F2FE;font-size:0.88rem;font-weight:800;">{entry:,}</div></div>
-    <div style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:0.55rem 0.4rem;text-align:center;"><div style="color:#64748B;font-size:0.58rem;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Stop Loss</div><div style="color:#EF4444;font-size:0.88rem;font-weight:800;">{sl:,}</div></div>
-    <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.18);border-radius:10px;padding:0.55rem 0.4rem;text-align:center;"><div style="color:#64748B;font-size:0.58rem;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Target 1</div><div style="color:#22C55E;font-size:0.88rem;font-weight:800;">{t1:,}</div></div>
-    <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.18);border-radius:10px;padding:0.55rem 0.4rem;text-align:center;"><div style="color:#64748B;font-size:0.58rem;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Target 2</div><div style="color:#22C55E;font-size:0.88rem;font-weight:800;">{t2:,}</div></div>
-    <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.18);border-radius:10px;padding:0.55rem 0.4rem;text-align:center;"><div style="color:#64748B;font-size:0.58rem;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Target 3</div><div style="color:#22C55E;font-size:0.88rem;font-weight:800;">{t3:,}</div></div>
+    <div style="background:rgba(0,242,254,0.07);border:1px solid rgba(0,242,254,0.2);border-radius:10px;padding:0.55rem 0.4rem;text-align:center;"><div style="color:#64748B;font-size:0.58rem;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Entry</div><div style="color:#00F2FE;font-size:0.88rem;font-weight:800;">{entry:}</div></div>
+    <div style="background:rgba(239,68,68,0.07);border:1px solid rgba(239,68,68,0.2);border-radius:10px;padding:0.55rem 0.4rem;text-align:center;"><div style="color:#64748B;font-size:0.58rem;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Stop Loss</div><div style="color:#EF4444;font-size:0.88rem;font-weight:800;">{sl:}</div></div>
+    <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.18);border-radius:10px;padding:0.55rem 0.4rem;text-align:center;"><div style="color:#64748B;font-size:0.58rem;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Target 1</div><div style="color:#22C55E;font-size:0.88rem;font-weight:800;">{t1:}</div></div>
+    <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.18);border-radius:10px;padding:0.55rem 0.4rem;text-align:center;"><div style="color:#64748B;font-size:0.58rem;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Target 2</div><div style="color:#22C55E;font-size:0.88rem;font-weight:800;">{t2:}</div></div>
+    <div style="background:rgba(34,197,94,0.07);border:1px solid rgba(34,197,94,0.18);border-radius:10px;padding:0.55rem 0.4rem;text-align:center;"><div style="color:#64748B;font-size:0.58rem;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Target 3</div><div style="color:#22C55E;font-size:0.88rem;font-weight:800;">{t3:}</div></div>
   </div>
   <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.9rem;align-items:center;">
     {''.join(f'<span style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:6px;padding:0.2rem 0.55rem;color:#F59E0B;font-size:0.72rem;font-weight:600;">{ind}</span>' for ind in indicators)}

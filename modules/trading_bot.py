@@ -28,37 +28,31 @@ BROKERS = {
         "logo": "\U0001f331",
         "status": "coming_soon",
         "description": "Groww broker connector - API integration coming soon. Currently in sandbox mode.",
-        "color": "#00d4ff",
-    },
+        "color": "#00d4ff"},
     "Zerodha": {
         "name": "Zerodha (Kite)",
         "logo": "\U0001f537",
         "status": "sandbox",
         "description": "Zerodha Kite Connect API. Set ZERODHA_API_KEY and ZERODHA_ACCESS_TOKEN in secrets.",
-        "color": "#ff6b35",
-    },
+        "color": "#ff6b35"},
     "Angel One": {
         "name": "Angel One (SmartAPI)",
         "logo": "\U0001f4c8",
         "status": "sandbox",
         "description": "Angel One SmartAPI integration. Set ANGEL_API_KEY and ANGEL_JWT in secrets.",
-        "color": "#4a9eff",
-    },
+        "color": "#4a9eff"},
     "Fyers": {
         "name": "Fyers",
         "logo": "\U0001f525",
         "status": "sandbox",
         "description": "Fyers API integration. Set FYERS_APP_ID and FYERS_ACCESS_TOKEN in secrets.",
-        "color": "#a371f7",
-    },
+        "color": "#a371f7"},
     "Dhan": {
         "name": "Dhan",
         "logo": "\U0001f4b0",
         "status": "sandbox",
         "description": "Dhan API integration. Set DHAN_ACCESS_TOKEN in secrets.",
-        "color": "#00ff88",
-    },
-}
+        "color": "#00ff88"}}
 
 def _get_broker_status(broker_key):
     """Check if broker credentials are available."""
@@ -89,8 +83,7 @@ def _place_order_simulated(ticker, side, qty, price, broker="Sandbox"):
         "qty": qty,
         "price": price,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "message": f"[SANDBOX via {broker}] Would {side} {qty} {ticker} @ {price:.2f}. No real order placed.",
-    }
+        "message": f"[SANDBOX via {broker}] Would {side} {qty} {ticker} @ {price:.2f}. No real order placed."}
 
 def _ai_analyze_and_decide(df, ticker):
     """AI analyzes data and generates a trading decision (deterministic rules, no LLM needed)."""
@@ -279,6 +272,5 @@ def _run_bot_analysis():
                         trades.append({
                             "time": result["timestamp"], "symbol": symbol, "action": decision["action"],
                             "qty": qty, "price": price, "broker": broker, "status": result["status"],
-                            "pnl": 0, "reason": decision["reason"], "confidence": decision["confidence"],
-                        })
+                            "pnl": 0, "reason": decision["reason"], "confidence": decision["confidence"]})
                         st.session_state["bot_trades"] = trades

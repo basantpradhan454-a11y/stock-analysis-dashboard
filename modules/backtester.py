@@ -26,8 +26,7 @@ STRATEGIES = {
     "EMA Crossover (9/21)": {"desc": "Buy when EMA9 crosses above EMA21. Sell on opposite.", "params": {}},
     "EMA Golden/Death Cross (50/200)": {"desc": "Golden Cross (EMA50>EMA200) = Buy. Death Cross = Sell.", "params": {}},
     "Bollinger Band Bounce": {"desc": "Buy at lower BB. Sell at upper BB.", "params": {}},
-    "RSI + MACD Combo": {"desc": "Buy when RSI < 40 AND MACD > Signal. Sell when RSI > 60 AND MACD < Signal.", "params": {"rsi_buy": 40}},
-}
+    "RSI + MACD Combo": {"desc": "Buy when RSI < 40 AND MACD > Signal. Sell when RSI > 60 AND MACD < Signal.", "params": {"rsi_buy": 40}}}
 
 @st.cache_data(ttl=600, show_spinner=False)
 def _fetch_data(sym, period, interval):
@@ -180,9 +179,8 @@ def render_backtester():
         fig.add_trace(go.Scatter(x=eq_df.index, y=bh, name="Buy & Hold", line=dict(color="#4a9eff", width=1.5, dash="dot")))
         fig.update_layout(height=380, margin=dict(l=0,r=0,t=10,b=0), hovermode="x unified", dragmode="zoom")
         st.plotly_chart(fig, use_container_width=True, config={
-            "scrollZoom": True, "doubleClick": "reset", "modeBarButtonsToAdd": ["drawline", "eraseshape"], "displayModeBar": True, "displaylogo": False,
-            "responsive": True, "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"],
-        })
+            "scrollZoom": True, "modeBarButtonsToAdd": ["drawline", "eraseshape"], "displayModeBar": True, "displaylogo": False,
+            "responsive": True, "modeBarButtonsToRemove": ["select2d", "lasso2d", "autoScale2d"]})
 
     with tab_tr:
         trades_df = result["trades_df"]
