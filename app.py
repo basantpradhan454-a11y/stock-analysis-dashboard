@@ -499,53 +499,102 @@ hr, .stMarkdown hr {
 """, unsafe_allow_html=True)
 
 # ── 3-Dot HUD Navigation (replaces floating arrows) ──
-st.components.v1.html("""
-<div id="hudNavMenu" style="position:fixed;top:14px;right:18px;z-index:999999;display:flex;flex-direction:column;align-items:flex-end;">
-  <div id="hudDots" style="display:flex;gap:6px;cursor:pointer;padding:10px 14px;
-       background:rgba(5,7,13,0.9);backdrop-filter:blur(10px);
-       border:1px solid rgba(0,240,255,0.3);
-       clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);
-       transition:all 0.25s ease;"
-       onmouseover="this.style.borderColor='#00F0FF';this.style.boxShadow='0 0 12px rgba(0,240,255,0.4)';"
-       onmouseout="this.style.borderColor='rgba(0,240,255,0.3)';this.style.boxShadow='none';"
-       onclick="var p=document.getElementById('hudPopup');p.style.display = (p.style.display==='block')?'none':'block';">
-    <div style="width:5px;height:5px;border-radius:50%;background:#00F0FF;box-shadow:0 0 5px #00F0FF;"></div>
-    <div style="width:5px;height:5px;border-radius:50%;background:#00F0FF;box-shadow:0 0 5px #00F0FF;"></div>
-    <div style="width:5px;height:5px;border-radius:50%;background:#00F0FF;box-shadow:0 0 5px #00F0FF;"></div>
+# Inject directly into parent DOM via st.markdown (no iframe boundary issues)
+st.markdown("""
+<style>
+#hudNavWrap {
+  position: fixed !important;
+  top: 14px !important;
+  right: 18px !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+}
+#hudDotsBtn {
+  display: flex !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  padding: 12px 16px !important;
+  background: rgba(5,7,13,0.92) !important;
+  border: 1px solid rgba(0,240,255,0.35) !important;
+  clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px) !important;
+  transition: all 0.25s ease !important;
+}
+#hudDotsBtn:hover {
+  border-color: #00F0FF !important;
+  box-shadow: 0 0 16px rgba(0,240,255,0.4) !important;
+}
+#hudDotsBtn .hud-dot {
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background: #00F0FF !important;
+  box-shadow: 0 0 6px #00F0FF !important;
+}
+#hudDropdown {
+  display: none !important;
+  position: absolute !important;
+  top: 100% !important;
+  right: 0 !important;
+  margin-top: 6px !important;
+  background: rgba(5,7,13,0.97) !important;
+  border: 1px solid rgba(0,240,255,0.4) !important;
+  min-width: 170px !important;
+  clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 16px rgba(0,240,255,0.1) !important;
+}
+#hudDropdown.open { display: block !important; }
+.hud-nav-item {
+  display: block !important;
+  padding: 12px 18px !important;
+  font-family: 'Orbitron', monospace !important;
+  font-size: 11px !important;
+  letter-spacing: 2px !important;
+  text-transform: uppercase !important;
+  color: #C8D4E3 !important;
+  cursor: pointer !important;
+  text-decoration: none !important;
+  border-bottom: 1px solid rgba(0,240,255,0.1) !important;
+  transition: all 0.2s ease !important;
+}
+.hud-nav-item:hover {
+  background: rgba(0,240,255,0.1) !important;
+  color: #00F0FF !important;
+  text-shadow: 0 0 8px rgba(0,240,255,0.4) !important;
+  padding-left: 24px !important;
+}
+.hud-nav-item.close-item {
+  color: #FF3B5C !important;
+}
+.hud-nav-item.close-item:hover {
+  background: rgba(255,59,92,0.1) !important;
+  color: #FF3B5C !important;
+}
+</style>
+
+<div id="hudNavWrap">
+  <div id="hudDotsBtn" onclick="var d=document.getElementById('hudDropdown');d.classList.toggle('open');">
+    <div class="hud-dot"></div>
+    <div class="hud-dot"></div>
+    <div class="hud-dot"></div>
   </div>
-  <div id="hudPopup" style="display:none;position:absolute;top:100%;right:0;margin-top:6px;
-       background:rgba(5,7,13,0.95);backdrop-filter:blur(14px);
-       border:1px solid rgba(0,240,255,0.4);min-width:160px;
-       clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);">
-    <div onclick="window.parent.window.scrollTo({top:0,behavior:'smooth'});document.getElementById('hudPopup').style.display='none';"
-         style="padding:11px 16px;font-family:Orbitron,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#C8D4E3;cursor:pointer;border-bottom:1px solid rgba(0,240,255,0.1);transition:all 0.2s;"
-         onmouseover="this.style.background='rgba(0,240,255,0.1)';this.style.color='#00F0FF';this.style.paddingLeft='22px';"
-         onmouseout="this.style.background='none';this.style.color='#C8D4E3';this.style.paddingLeft='16px';">
-      &#9650; Top
-    </div>
-    <div onclick="window.parent.window.scrollTo({top:999999,behavior:'smooth'});document.getElementById('hudPopup').style.display='none';"
-         style="padding:11px 16px;font-family:Orbitron,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#C8D4E3;cursor:pointer;border-bottom:1px solid rgba(0,240,255,0.1);transition:all 0.2s;"
-         onmouseover="this.style.background='rgba(0,240,255,0.1)';this.style.color='#00F0FF';this.style.paddingLeft='22px';"
-         onmouseout="this.style.background='none';this.style.color='#C8D4E3';this.style.paddingLeft='16px';">
-      &#9660; Bottom
-    </div>
-    <div onclick="document.getElementById('hudPopup').style.display='none';"
-         style="padding:11px 16px;font-family:Orbitron,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#FF3B5C;cursor:pointer;transition:all 0.2s;"
-         onmouseover="this.style.background='rgba(255,59,92,0.1)';this.style.paddingLeft='22px';"
-         onmouseout="this.style.background='none';this.style.paddingLeft='16px';">
-      &#10005; Close
-    </div>
+  <div id="hudDropdown">
+    <a class="hud-nav-item" onclick="window.scrollTo({top:0,behavior:'smooth'});document.getElementById('hudDropdown').classList.remove('open');">&#9650; Top</a>
+    <a class="hud-nav-item" onclick="window.scrollTo({top:999999,behavior:'smooth'});document.getElementById('hudDropdown').classList.remove('open');">&#9660; Bottom</a>
+    <a class="hud-nav-item close-item" onclick="document.getElementById('hudDropdown').classList.remove('open');">&#10005; Close</a>
   </div>
 </div>
+
 <script>
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest('#hudNavMenu')) {
-      var p = document.getElementById('hudPopup');
-      if (p) p.style.display = 'none';
-    }
-  });
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#hudNavWrap')) {
+    var d = document.getElementById('hudDropdown');
+    if (d) d.classList.remove('open');
+  }
+});
 </script>
-""", height=0)
+""", unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────
 # ──────────────────────────────────────────────
