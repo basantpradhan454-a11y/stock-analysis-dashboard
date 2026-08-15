@@ -498,9 +498,9 @@ hr, .stMarkdown hr {
 </style>
 """, unsafe_allow_html=True)
 
-# ── 3-Dot HUD Navigation (replaces floating arrows) ──
-# Inject into parent DOM via st.components.v1.html (scripts work here)
-# Element is created in parent.document so position:fixed works correctly
+# ── 3-Dot HUD Navigation (all features + scroll) ──
+# Inject into parent DOM via st.components.v1.html
+# Navigates via URL query params: ?tab=FeatureName
 st.components.v1.html("""
 <script>
 (function() {
@@ -522,32 +522,72 @@ st.components.v1.html("""
 
   var dropdown = p.createElement('div');
   dropdown.id = 'hudDropdown';
-  dropdown.style.cssText = 'display:none;position:absolute;top:100%;right:0;margin-top:6px;background:rgba(5,7,13,0.97);border:1px solid rgba(0,240,255,0.4);min-width:170px;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 16px rgba(0,240,255,0.1);';
+  dropdown.style.cssText = 'display:none;position:absolute;top:100%;right:0;margin-top:6px;background:rgba(5,7,13,0.97);border:1px solid rgba(0,240,255,0.4);min-width:200px;max-height:70vh;overflow-y:auto;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 16px rgba(0,240,255,0.1);';
 
-  var items = [
-    {label:'\u25B2 TOP', color:'#C8D4E3', action:function(){ parent.window.scrollTo({top:0,behavior:'smooth'}); }},
-    {label:'\u25BC BOTTOM', color:'#C8D4E3', action:function(){ parent.window.scrollTo({top:999999,behavior:'smooth'}); }},
-    {label:'\u2715 CLOSE', color:'#FF3B5C', action:function(){}}
+  var navItems = [
+    {label:'DASHBOARD', icon:'\u25A3', tab:'Dashboard', color:'#00F0FF'},
+    {label:'PRIME TERMINAL', icon:'\u25A4', tab:'Prime Terminal', color:'#00F0FF'},
+    {label:'AI ANALYSIS', icon:'\u25C9', tab:'AI Analysis', color:'#00F0FF'},
+    {label:'FUNDAMENTAL ENGINE', icon:'\u25C8', tab:'Fundamental Engine', color:'#00F0FF'},
+    {label:'STRATEGY BOT', icon:'\u25B2', tab:'Strategy Bot', color:'#C8D4E3'},
+    {label:'BACKTESTER', icon:'\u25B6', tab:'Backtester', color:'#C8D4E3'},
+    {label:'QUANT TOOLS', icon:'\u25CB', tab:'Quant Tools', color:'#C8D4E3'},
+    {label:'QUANT TRADE', icon:'\u25CF', tab:'Quant Trade', color:'#C8D4E3'},
+    {label:'QUANT TRADING', icon:'\u25C6', tab:'Quant Trading', color:'#C8D4E3'},
+    {label:'PORTFOLIO', icon:'\u25A0', tab:'Portfolio', color:'#C8D4E3'},
+    {label:'TRADING BOT', icon:'\u25AC', tab:'Trading Bot', color:'#C8D4E3'},
+    {type:'divider'},
+    {label:'\u25B2 TOP', icon:'', type:'scroll', target:'top', color:'#C8D4E3'},
+    {label:'\u25BC BOTTOM', icon:'', type:'scroll', target:'bottom', color:'#C8D4E3'},
+    {label:'\u2715 CLOSE', icon:'', type:'close', color:'#FF3B5C'}
   ];
 
-  items.forEach(function(item, i) {
+  navItems.forEach(function(item) {
+    if (item.type === 'divider') {
+      var div = p.createElement('div');
+      div.style.cssText = 'height:1px;background:linear-gradient(90deg,transparent,rgba(0,240,255,0.3),transparent);margin:4px 0;';
+      dropdown.appendChild(div);
+      return;
+    }
+
     var a = p.createElement('div');
-    a.style.cssText = 'padding:12px 18px;font-family:Orbitron,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:'+item.color+';cursor:pointer;border-bottom:1px solid rgba(0,240,255,0.1);transition:all 0.2s ease;';
-    a.textContent = item.label;
+    a.style.cssText = 'padding:10px 16px;font-family:Orbitron,monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:'+item.color+';cursor:pointer;border-bottom:1px solid rgba(0,240,255,0.08);transition:all 0.2s ease;display:flex;align-items:center;gap:8px;';
+    if (item.icon) {
+      a.innerHTML = '<span style="font-size:8px;opacity:0.7;">'+item.icon+'</span> <span>'+item.label+'</span>';
+    } else {
+      a.textContent = item.label;
+    }
+
     a.onmouseover = function() {
       this.style.background = item.color === '#FF3B5C' ? 'rgba(255,59,92,0.1)' : 'rgba(0,240,255,0.1)';
       this.style.color = item.color === '#FF3B5C' ? '#FF3B5C' : '#00F0FF';
       this.style.textShadow = item.color === '#FF3B5C' ? 'none' : '0 0 8px rgba(0,240,255,0.4)';
-      this.style.paddingLeft = '24px';
+      this.style.paddingLeft = '20px';
     };
     a.onmouseout = function() {
       this.style.background = 'none';
       this.style.color = item.color;
       this.style.textShadow = 'none';
-      this.style.paddingLeft = '18px';
+      this.style.paddingLeft = '16px';
     };
-    a.onclick = function() { item.action(); dropdown.style.display='none'; };
-    if (i === items.length - 1) a.style.borderBottom = 'none';
+
+    if (item.type === 'scroll') {
+      a.onclick = function() {
+        if (item.target === 'top') parent.window.scrollTo({top:0,behavior:'smooth'});
+        else parent.window.scrollTo({top:999999,behavior:'smooth'});
+        dropdown.style.display='none';
+      };
+    } else if (item.type === 'close') {
+      a.onclick = function() { dropdown.style.display='none'; };
+    } else {
+      a.onclick = function() {
+        parent.window.location.search = '?tab=' + encodeURIComponent(item.tab);
+      };
+    }
+
+    if (navItems.indexOf(item) === navItems.length - 1) {
+      a.style.borderBottom = 'none';
+    }
     dropdown.appendChild(a);
   });
 
@@ -647,7 +687,14 @@ ASSETS = [
 
 # ── Navigation Tabs ──
 NAV_TABS = ["Dashboard", "Prime Terminal", "AI Analysis", "Fundamental Engine", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Quant Trading", "Portfolio", "Trading Bot"]
-active_tab = st.sidebar.selectbox("Navigate", NAV_TABS, key="nav_tab")
+
+# Read tab from URL query param (set by 3-dot menu) or fallback to sidebar
+_qp = st.query_params.get("tab")
+if _qp and _qp in NAV_TABS:
+    active_tab = _qp
+    st.sidebar.selectbox("Navigate", NAV_TABS, index=NAV_TABS.index(_qp), key="nav_tab")
+else:
+    active_tab = st.sidebar.selectbox("Navigate", NAV_TABS, key="nav_tab")
 
 if active_tab != "Dashboard":
     if active_tab == "Strategy Bot":
