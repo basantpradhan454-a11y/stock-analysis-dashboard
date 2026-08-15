@@ -4,7 +4,18 @@ import requests
 import re
 
 def _try_nse_data(ticker):
-    """Try fetching fundamentals from NSE India API."""
+    """Try fetching fundamentals from NSE India API (using nse_fundamentals module)."""
+    try:
+        from modules.nse_fundamentals import fetch_nse_fundamentals
+        symbol = ticker.replace(".NS", "").replace(".BO", "")
+        if ticker.startswith("^"):
+            return {}
+        result = fetch_nse_fundamentals(symbol)
+        if result and isinstance(result, dict):
+            return result
+    except Exception:
+        pass
+    # Fallback: direct API call
     try:
         symbol = ticker.replace(".NS", "").replace(".BO", "")
         if ticker.startswith("^"):
@@ -14,9 +25,7 @@ def _try_nse_data(ticker):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
             "Accept": "application/json",
         })
-        # NSE homepage to get cookies
         session.get("https://www.nseindia.com", timeout=10)
-        # Fetch quote data
         url = f"https://www.nseindia.com/api/quote-equity?symbol={symbol}"
         resp = session.get(url, timeout=10)
         if resp.status_code == 200:
@@ -24,7 +33,6 @@ def _try_nse_data(ticker):
             metadata = data.get("metadata", {})
             industry_info = data.get("industryInfo", {})
             return {
-                "nse_pe": metadata.get("pb") and metadata.get("pb").get("pdEq") if isinstance(metadata.get("pb"), dict) else None,
                 "nse_sector": industry_info.get("industry", "N/A"),
                 "nse_market_cap": metadata.get("marketCap") if isinstance(metadata.get("marketCap"), (int, float)) else None,
             }

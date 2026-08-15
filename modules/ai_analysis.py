@@ -836,9 +836,9 @@ def _render_ml_prediction(df, sym=""):
     # ── Probability bars ──
     prob_col1, prob_col2 = st.columns(2)
     with prob_col1:
-        st.markdown(f"<div style='background:#1a2e1a;border:1px solid #26a69a;border-radius:10px;padding:14px;text-align:center;margin:4px;'><div style='color:#26a69a;font-size:12px;'>Probability UP (Ensemble)</div><div style='color:#26a69a;font-size:1.8rem;font-weight:bold;'>{prob_up*100:.1f}%</div><div style='background:#0d1117;border-radius:6px;height:10px;margin-top:8px;overflow:hidden;'><div style='background:#26a69a;height:100%;width:{prob_up*100:.1f}%;border-radius:6px;'></div></div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#1a2e1a;border:1px solid #26a69a;border-radius:0;padding:14px;text-align:center;margin:4px;'><div style='color:#26a69a;font-size:12px;'>Probability UP (Ensemble)</div><div style='color:#26a69a;font-size:1.8rem;font-weight:bold;'>{prob_up*100:.1f}%</div><div style='background:#05070D;border-radius:6px;height:10px;margin-top:8px;overflow:hidden;'><div style='background:#26a69a;height:100%;width:{prob_up*100:.1f}%;border-radius:6px;'></div></div></div>", unsafe_allow_html=True)
     with prob_col2:
-        st.markdown(f"<div style='background:#2e1a1a;border:1px solid #ef5350;border-radius:10px;padding:14px;text-align:center;margin:4px;'><div style='color:#ef5350;font-size:12px;'>Probability DOWN (Ensemble)</div><div style='color:#ef5350;font-size:1.8rem;font-weight:bold;'>{prob_down*100:.1f}%</div><div style='background:#0d1117;border-radius:6px;height:10px;margin-top:8px;overflow:hidden;'><div style='background:#ef5350;height:100%;width:{prob_down*100:.1f}%;border-radius:6px;'></div></div></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='background:#2e1a1a;border:1px solid #ef5350;border-radius:0;padding:14px;text-align:center;margin:4px;'><div style='color:#ef5350;font-size:12px;'>Probability DOWN (Ensemble)</div><div style='color:#ef5350;font-size:1.8rem;font-weight:bold;'>{prob_down*100:.1f}%</div><div style='background:#05070D;border-radius:6px;height:10px;margin-top:8px;overflow:hidden;'><div style='background:#ef5350;height:100%;width:{prob_down*100:.1f}%;border-radius:6px;'></div></div></div>", unsafe_allow_html=True)
 
     # ── Feature importance comparison (LR vs RF) ──
     st.markdown("**\U0001f4ca Feature Importance (LR vs Random Forest):**")
@@ -921,7 +921,7 @@ def _render_ai_strategy(df, rsi, macd, macd_sig, sup_levels, res_levels, last_rs
         bias = "NEUTRAL"; strategy_name = "Range Trading"
         actions = ["BUY at support, SELL at resistance", "Use RSI < 30 for entry, RSI > 70 for exit"]
     bias_color = "#26a69a" if "BULLISH" in bias else "#ef5350" if "BEARISH" in bias else "#78909c"
-    st.markdown(f"<div style='background:linear-gradient(135deg,rgba(0,20,40,0.9),rgba(5,0,30,0.85));border:2px solid {bias_color}33;border-radius:12px;padding:1.1rem 1.3rem;margin-bottom:1rem;'><div style='color:#8b949e;font-size:0.7rem;font-weight:700;letter-spacing:0.1em;'>AI GENERATED STRATEGY</div><div style='font-size:1.3rem;font-weight:bold;color:{bias_color};margin-top:4px;'>{strategy_name}</div><div style='color:#c9d1d9;font-size:0.9rem;margin-top:6px;'>Bias: {bias} (Score: {bullish_score:+d})</div></div>", unsafe_allow_html=True)
+    st.markdown(f"<div style='background:linear-gradient(135deg,rgba(0,20,40,0.9),rgba(5,0,30,0.85));border:2px solid {bias_color}33;border-radius:0;padding:1.1rem 1.3rem;margin-bottom:1rem;'><div style='color:#8b949e;font-size:0.7rem;font-weight:700;letter-spacing:0.1em;'>AI GENERATED STRATEGY</div><div style='font-size:1.3rem;font-weight:bold;color:{bias_color};margin-top:4px;'>{strategy_name}</div><div style='color:#c9d1d9;font-size:0.9rem;margin-top:6px;'>Bias: {bias} (Score: {bullish_score:+d})</div></div>", unsafe_allow_html=True)
     st.markdown("**\U0001f4cb Market Conditions Detected:**")
     for c in conditions: st.markdown(f"- {c}")
     col_e, col_x = st.columns(2)
@@ -995,7 +995,7 @@ def _run_ai_strategy_backtest(df, sym, strategy_name, risk_rules):
 
 # ═══ MAIN RENDER ═══
 def render_ai_analysis():
-    st.markdown("""<div style="background:linear-gradient(135deg,rgba(2,6,9,0.97),rgba(0,5,20,0.95));border:1px solid rgba(74,158,255,0.25);border-radius:14px;padding:1.2rem 1.5rem;margin-bottom:1rem;"><div style="display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;"><div><div style="font-size:1.1rem;font-weight:800;font-family:Orbitron,monospace;background:linear-gradient(90deg,#4a9eff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">\U0001f9e0 AI Analysis Engine</div><div style="color:#8b949e;font-size:11px;margin-top:2px;">Photo-to-Chart \u00b7 Monte Carlo 30D \u00b7 ML (LR+RF) \u00b7 AI Strategy \u00b7 Golden/Death Cross \u00b7 Candlestick Patterns \u00b7 Full Quant Analysis</div></div></div></div>""", unsafe_allow_html=True)
+    st.markdown("""<div style="background:linear-gradient(135deg,rgba(2,6,9,0.97),rgba(0,5,20,0.95));border:1px solid rgba(0,240,255,0.25);border-radius:14px;padding:1.2rem 1.5rem;margin-bottom:1rem;"><div style="display:flex;align-items:center;gap:0.9rem;flex-wrap:wrap;"><div><div style="font-size:1.1rem;font-weight:800;font-family:Orbitron,monospace;background:linear-gradient(90deg,#4a9eff,#00ff88);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">\U0001f9e0 AI Analysis Engine</div><div style="color:#8b949e;font-size:11px;margin-top:2px;">Photo-to-Chart \u00b7 Monte Carlo 30D \u00b7 ML (LR+RF) \u00b7 AI Strategy \u00b7 Golden/Death Cross \u00b7 Candlestick Patterns \u00b7 Full Quant Analysis</div></div></div></div>""", unsafe_allow_html=True)
     sub_tabs = st.tabs(["\U0001f4f8 Photo \u2192 Chart", "\U0001f4ca Full Analysis", "\U0001f3b2 Monte Carlo 30D", "\U0001f916 ML Prediction", "\U0001f916 StoxAI Chat", "\U0001f4f8 Chart Vision"])
 
     # -- StoxAI Chat (from FinSage AI module) --

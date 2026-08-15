@@ -175,7 +175,7 @@ def _render_prime_terminal_html(ticker_data_json, chart_data_json):
   .news-item{{padding:8px 0;border-bottom:1px solid rgba(74,158,255,0.08);font-size:12px;line-height:1.4;}}
   .news-item:last-child{{border-bottom:none;}}
   .news-time{{color:var(--accent);font-weight:600;margin-right:6px;}}
-  .news-tag{{
+  .news-tag{font-family:'Share Tech Mono',monospace;{
     display:inline-block;background:rgba(28,37,48,0.6);color:var(--amber);
     font-size:10px;padding:1px 6px;border-radius:3px;margin-right:6px;
   }}
@@ -221,7 +221,7 @@ def _render_prime_terminal_html(ticker_data_json, chart_data_json):
 </div>
 <div class="dashboard">
   <div class="panel chart-panel">
-    <div class="panel-header"><span id="chartTitle">Price Chart</span><span id="chartPrice" class="up">--</span></div>
+    <div style="padding:6px 10px;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);"><span id="chartTitle">PRICE CHART</span> <span id="chartPrice" class="up" style="float:right;">--</span></div>
     <div class="panel-body chart-overlay">
       <div class="chart-info">
         <div class="sym" id="chartSym"></div>
@@ -586,14 +586,14 @@ def render_prime_terminal():
     col1, col2 = st.columns([3, 1])
     with col1:
         search_ticker = st.text_input(
-            "Search Ticker",
+            "TICKER SEARCH",
             value="RELIANCE.NS",
             placeholder="e.g. RELIANCE.NS, TCS.NS, AAPL, BTC-USD...",
             key="prime_terminal_ticker",
         )
     with col2:
         st.markdown("&nbsp;")
-        load_btn = st.button("Load Chart", type="primary", use_container_width=True, key="prime_terminal_load")
+        load_btn = st.button("LOAD CHART", type="primary", use_container_width=True, key="prime_terminal_load")
 
     # Fetch chart data for the searched ticker
     chart_data = {"ok": False, "error": "Click Load Chart to fetch data"}

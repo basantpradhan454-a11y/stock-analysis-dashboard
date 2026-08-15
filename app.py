@@ -20,277 +20,503 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
     menu_items={
-        "About": "📊 Quant Desk — Stock Analysis Dashboard\nBuilt with Streamlit + Plotly + yfinance\nFor educational purposes only — not financial advice."},
+        "About": "QUANT DESK -- STOCK ANALYSIS DASHBOARD\nBuilt with Streamlit + Plotly + yfinance\nFor educational purposes only."},
 )
 # Hide GitHub deploy button only (3-dots menu stays visible)
 st.markdown("""
 <style>
-/* ═══ FUTURISTIC GLASSMORPHISM UI ═══ */
+/* ═══════════════════════════════════════════════════════════
+   SCI-FI COMMAND CENTER UI — Blade Runner x NASA x Tron
+   ═══════════════════════════════════════════════════════════ */
 
-/* ── Global: transparent glass theme ── */
-.stDeployButton {display: none !important;}
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap');
 
+:root {
+  --bg: #05070D;
+  --bg-grad: linear-gradient(135deg, #05070D 0%, #0A0E1A 40%, #0D1525 100%);
+  --cyan: #00F0FF;
+  --violet: #9D4EFF;
+  --magenta: #FF2D95;
+  --amber: #FFB800;
+  --green: #00FF88;
+  --red: #FF3B5C;
+  --text: #C8D4E3;
+  --muted: #5A6B80;
+  --panel: rgba(10, 14, 26, 0.65);
+  --panel-2: rgba(13, 18, 32, 0.7);
+  --border: rgba(0, 240, 255, 0.15);
+  --border-strong: rgba(0, 240, 255, 0.4);
+  --glow-cyan: 0 0 12px rgba(0, 240, 255, 0.3);
+  --glow-violet: 0 0 12px rgba(157, 78, 255, 0.3);
+  --glow-magenta: 0 0 12px rgba(255, 45, 149, 0.3);
+  --font-hud: 'Orbitron', 'Rajdhani', monospace;
+  --font-data: 'Share Tech Mono', monospace;
+  --font-body: 'Rajdhani', sans-serif;
+}
+
+/* ── Remove GitHub / Streamlit chrome ── */
+.stDeployButton, #MainMenu, [data-testid="stMainMenu"] { display: none !important; }
+footer { display: none !important; }
+#stGithubLink, .stGithubLink { display: none !important; }
+.stApp [data-testid="stToolbar"] { display: none !important; }
+
+/* ── Global background: deep space ── */
 .stApp {
-    background: linear-gradient(135deg, #0a0e17 0%, #0d1117 40%, #101522 100%) !important;
+  background: var(--bg-grad) !important;
+  background-attachment: fixed !important;
 }
 
-/* Main container — transparent */
+/* Hexagonal grid overlay at low opacity */
+.stApp::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image:
+    linear-gradient(rgba(0, 240, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scan-line effect */
+.stApp::after {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0px,
+    transparent 2px,
+    rgba(0, 240, 255, 0.015) 2px,
+    rgba(0, 240, 255, 0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
 .stMain, .stMain > section, [data-testid="stMain"] {
-    background: transparent !important;
+  background: transparent !important;
+  position: relative;
+  z-index: 2;
 }
 
-/* ── Glassmorphism panels ── */
+/* ── Headings: HUD style ── */
+h1, h2, h3, h4 {
+  font-family: var(--font-hud) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 3px !important;
+  font-weight: 700 !important;
+  color: var(--cyan) !important;
+  text-shadow: 0 0 10px rgba(0, 240, 255, 0.3) !important;
+}
+
+h1 { font-size: 1.8rem !important; letter-spacing: 4px !important; }
+h2 { font-size: 1.4rem !important; }
+h3 { font-size: 1.1rem !important; }
+h4 { font-size: 0.95rem !important; letter-spacing: 2px !important; }
+
+/* ── Body text ── */
+p, span, div, td, th {
+  font-family: var(--font-body) !important;
+}
 .stMetric, [data-testid="stMetric"] {
-    background: rgba(16, 21, 33, 0.6) !important;
-    backdrop-filter: blur(12px) !important;
-    -webkit-backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(74, 158, 255, 0.12) !important;
-    border-radius: 12px !important;
-    padding: 14px 16px !important;
-    transition: all 0.3s ease !important;
+  background: var(--panel) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 2px !important;
+  padding: 14px 16px !important;
+  transition: all 0.3s ease !important;
+  position: relative;
+}
+.stMetric::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; width: 3px; height: 100%;
+  background: var(--cyan);
+  box-shadow: var(--glow-cyan);
 }
 .stMetric:hover {
-    border-color: rgba(74, 158, 255, 0.35) !important;
-    box-shadow: 0 4px 20px rgba(74, 158, 255, 0.1) !important;
-    transform: translateY(-2px) !important;
+  border-color: var(--border-strong) !important;
+  box-shadow: var(--glow-cyan) !important;
+  transform: translateY(-2px) !important;
+}
+.stMetric label, .stMetric [data-testid="stMetricLabel"] {
+  font-family: var(--font-hud) !important;
+  font-size: 10px !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  color: var(--muted) !important;
+}
+.stMetric [data-testid="stMetricValue"] {
+  font-family: var(--font-data) !important;
+  color: var(--cyan) !important;
+  text-shadow: 0 0 6px rgba(0, 240, 255, 0.2) !important;
+}
+.stMetric [data-testid="stMetricDelta"] {
+  font-family: var(--font-data) !important;
 }
 
-/* ── Sidebar: glass effect ── */
+/* ── Sidebar: command center panel ── */
 section[data-testid="stSidebar"] {
-    background: rgba(10, 14, 23, 0.85) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border-right: 1px solid rgba(74, 158, 255, 0.15) !important;
+  background: rgba(5, 7, 13, 0.92) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border-right: 1px solid var(--border-strong) !important;
+  box-shadow: 4px 0 20px rgba(0, 240, 255, 0.05) !important;
 }
 section[data-testid="stSidebar"] > div {
-    padding-top: 1rem !important;
+  padding-top: 1rem !important;
 }
 
-/* ── Buttons: futuristic glass + neon glow ── */
+/* ── Buttons: angular clipped corners + neon ── */
 .stButton > button {
-    background: rgba(20, 26, 38, 0.7) !important;
-    backdrop-filter: blur(10px) !important;
-    -webkit-backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(74, 158, 255, 0.2) !important;
-    border-radius: 10px !important;
-    color: #e6edf3 !important;
-    font-weight: 600 !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+  background: rgba(0, 240, 255, 0.05) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px) !important;
+  color: var(--text) !important;
+  font-family: var(--font-hud) !important;
+  font-size: 12px !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  font-weight: 500 !important;
+  transition: all 0.25s ease !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3) !important;
 }
 .stButton > button:hover {
-    background: rgba(30, 40, 60, 0.8) !important;
-    border-color: rgba(74, 158, 255, 0.5) !important;
-    box-shadow: 0 4px 16px rgba(74, 158, 255, 0.15) !important;
-    transform: translateY(-1px) !important;
+  background: rgba(0, 240, 255, 0.12) !important;
+  border-color: var(--cyan) !important;
+  box-shadow: var(--glow-cyan) !important;
+  color: var(--cyan) !important;
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.5) !important;
 }
 .stButton > button:active {
-    transform: translateY(0px) !important;
+  transform: scale(0.98) !important;
 }
-/* Primary button — neon blue glow */
+/* Primary button — cyan neon */
 .stButton > button[kind="primary"] {
-    background: linear-gradient(135deg, rgba(59,130,246,0.3), rgba(74,158,255,0.2)) !important;
-    border: 1px solid rgba(74,158,255,0.4) !important;
-    box-shadow: 0 0 12px rgba(74,158,255,0.2), 0 2px 8px rgba(0,0,0,0.3) !important;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.15), rgba(157, 78, 255, 0.1)) !important;
+  border: 1px solid var(--border-strong) !important;
+  box-shadow: var(--glow-cyan), 0 2px 8px rgba(0,0,0,0.3) !important;
+  color: var(--cyan) !important;
 }
 .stButton > button[kind="primary"]:hover {
-    box-shadow: 0 0 20px rgba(74,158,255,0.35), 0 4px 16px rgba(74,158,255,0.15) !important;
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.25), rgba(157, 78, 255, 0.15)) !important;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.4), var(--glow-violet) !important;
 }
 
-/* ── Floating Action Buttons (bottom-right) ── */
-.floating-actions {
-    position: fixed !important;
-    bottom: 20px !important;
-    right: 20px !important;
-    z-index: 9999 !important;
-    display: flex !important;
-    flex-direction: column-reverse !important;
-    gap: 10px !important;
-}
-.fab-btn {
-    width: 48px !important;
-    height: 48px !important;
-    border-radius: 50% !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    background: rgba(20, 26, 38, 0.85) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(74, 158, 255, 0.3) !important;
-    color: #e6edf3 !important;
-    font-size: 20px !important;
-    cursor: pointer !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-}
-.fab-btn:hover {
-    transform: scale(1.1) !important;
-    border-color: rgba(74,158,255,0.6) !important;
-    box-shadow: 0 0 16px rgba(74,158,255,0.3) !important;
-}
-
-/* ── Inputs: glass style ── */
+/* ── Inputs: HUD terminal style ── */
 .stTextInput > div > div > input,
 .stSelectbox > div > div > div {
-    background: rgba(16, 21, 33, 0.6) !important;
-    backdrop-filter: blur(8px) !important;
-    border: 1px solid rgba(74, 158, 255, 0.15) !important;
-    border-radius: 10px !important;
-    color: #e6edf3 !important;
+  background: rgba(5, 7, 13, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  color: var(--cyan) !important;
+  font-family: var(--font-data) !important;
+  font-size: 13px !important;
 }
 .stTextInput > div > div > input:focus {
-    border-color: rgba(74, 158, 255, 0.4) !important;
-    box-shadow: 0 0 8px rgba(74, 158, 255, 0.15) !important;
+  border-color: var(--cyan) !important;
+  box-shadow: var(--glow-cyan) !important;
 }
 .stTextInput > div > div > input::placeholder {
-    color: #6e7681 !important;
+  color: var(--muted) !important;
+  font-family: var(--font-data) !important;
+}
+.stSelectbox > div > div > div {
+  font-family: var(--font-data) !important;
+  color: var(--cyan) !important;
 }
 
-/* ── Dataframes: transparent ── */
+/* ── Dataframes: transparent terminal ── */
 .stDataFrame {
-    background: rgba(16, 21, 33, 0.4) !important;
-    border: 1px solid rgba(74, 158, 255, 0.1) !important;
-    border-radius: 12px !important;
-    overflow: hidden !important;
+  background: var(--panel) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  overflow: hidden !important;
 }
 .stDataFrame [data-testid="stDataFrameResizable"] {
-    background: transparent !important;
+  background: transparent !important;
 }
 
-/* ── Info/Success/Error boxes: glass ── */
+/* ── Info/Success/Error boxes ── */
 .stAlert, .stInfo, .stSuccess, .stError, .stWarning {
-    background: rgba(16, 21, 33, 0.5) !important;
-    backdrop-filter: blur(8px) !important;
-    border: 1px solid rgba(74, 158, 255, 0.15) !important;
-    border-radius: 10px !important;
+  background: var(--panel) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid var(--border) !important;
+  border-left: 3px solid var(--cyan) !important;
+  border-radius: 0 !important;
 }
+.stSuccess { border-left-color: var(--green) !important; }
+.stError { border-left-color: var(--red) !important; }
+.stWarning { border-left-color: var(--amber) !important; }
 
-/* ── Expanders: glass ── */
+/* ── Expanders ── */
 .streamlit-expanderHeader {
-    background: rgba(20, 26, 38, 0.5) !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-}
-
-/* ── Headings: futuristic gradient text ── */
-h1, h2, h3 {
-    background: linear-gradient(90deg, #e6edf3, #8b949e) !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    font-weight: 700 !important;
+  background: var(--panel-2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  font-family: var(--font-hud) !important;
+  font-size: 12px !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  color: var(--cyan) !important;
 }
 
 /* ── Captions ── */
 .stCaption, p[data-testid="stCaption"] {
-    color: #6e7681 !important;
-    font-size: 12px !important;
+  color: var(--muted) !important;
+  font-family: var(--font-data) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.5px !important;
 }
 
-/* ── Plotly modebar: transparent floating ── */
+/* ── Plotly modebar: minimal HUD style ── */
 .modebar {
-    background: rgba(16, 21, 33, 0.7) !important;
-    backdrop-filter: blur(8px) !important;
-    border-radius: 8px !important;
-    padding: 4px !important;
-    border: 1px solid rgba(74, 158, 255, 0.1) !important;
+  background: rgba(5, 7, 13, 0.7) !important;
+  backdrop-filter: blur(8px) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  padding: 2px !important;
 }
-.modebar-btn {
-    color: #8b949e !important;
-}
+.modebar-btn { color: var(--muted) !important; }
 .modebar-btn:hover {
-    background: rgba(74, 158, 255, 0.15) !important;
-    color: #e6edf3 !important;
+  background: rgba(0, 240, 255, 0.15) !important;
+  color: var(--cyan) !important;
 }
 .modebar-btn.active {
-    background-color: rgba(59, 130, 246, 0.2) !important;
+  background-color: rgba(0, 240, 255, 0.2) !important;
+  color: var(--cyan) !important;
 }
 
-/* ── Fix Plotly chart zoom ── */
+/* Fix Plotly zoom */
 .js-plotly-plot .plot-container,
 .js-plotly-plot .svg-container {
-    touch-action: none !important;
+  touch-action: none !important;
 }
 
-/* ── Scrollbar: futuristic ── */
-::-webkit-scrollbar {
-    width: 8px !important;
-    height: 8px !important;
-}
-::-webkit-scrollbar-track {
-    background: rgba(10, 14, 23, 0.5) !important;
-}
+/* ── Scrollbar: sci-fi style ── */
+::-webkit-scrollbar { width: 6px !important; height: 6px !important; }
+::-webkit-scrollbar-track { background: rgba(5, 7, 13, 0.5) !important; }
 ::-webkit-scrollbar-thumb {
-    background: rgba(74, 158, 255, 0.3) !important;
-    border-radius: 4px !important;
+  background: rgba(0, 240, 255, 0.3) !important;
+  border-radius: 0 !important;
 }
-::-webkit-scrollbar-thumb:hover {
-    background: rgba(74, 158, 255, 0.5) !important;
-}
+::-webkit-scrollbar-thumb:hover { background: rgba(0, 240, 255, 0.5) !important; }
 
-/* ── Tab borders: transparent ── */
-.stTabs [data-baseweb="tab-list"] {
-    gap: 4px !important;
-}
+/* ── Tabs: angular HUD style ── */
+.stTabs [data-baseweb="tab-list"] { gap: 2px !important; }
 .stTabs [data-baseweb="tab"] {
-    background: rgba(16, 21, 33, 0.4) !important;
-    backdrop-filter: blur(8px) !important;
-    border-radius: 8px 8px 0 0 !important;
-    border: 1px solid rgba(74, 158, 255, 0.1) !important;
-    padding: 8px 16px !important;
+  background: var(--panel) !important;
+  backdrop-filter: blur(8px) !important;
+  border-radius: 0 !important;
+  border: 1px solid var(--border) !important;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px) !important;
+  padding: 8px 18px !important;
+  font-family: var(--font-hud) !important;
+  font-size: 11px !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+  color: var(--muted) !important;
+  transition: all 0.25s ease !important;
+}
+.stTabs [data-baseweb="tab"]:hover {
+  color: var(--cyan) !important;
+  border-color: var(--border-strong) !important;
+}
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+  color: var(--cyan) !important;
+  border-color: var(--cyan) !important;
+  box-shadow: var(--glow-cyan) !important;
+  background: rgba(0, 240, 255, 0.08) !important;
 }
 
-/* ── Signal badge glow ── */
-.signal-glow-buy {
-    box-shadow: 0 0 12px rgba(12, 163, 12, 0.3) !important;
-}
-.signal-glow-sell {
-    box-shadow: 0 0 12px rgba(208, 59, 59, 0.3) !important;
-}
-
-/* ── Divider: gradient line ── */
+/* ── Divider: data-line ── */
 hr, .stMarkdown hr {
-    border: none !important;
-    height: 1px !important;
-    background: linear-gradient(90deg, transparent, rgba(74, 158, 255, 0.2), transparent) !important;
+  border: none !important;
+  height: 1px !important;
+  background: linear-gradient(90deg, transparent, var(--cyan), transparent) !important;
+  opacity: 0.3 !important;
 }
 
-/* ── Asset cards: glass hover ── */
+/* ── Animated title shimmer ── */
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.sci-fi-title {
+  font-family: var(--font-hud) !important;
+  background: linear-gradient(90deg, var(--cyan), var(--violet), var(--cyan));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 3s linear infinite;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+/* ── Pulsing status dot ── */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px currentColor; }
+  50% { opacity: 0.5; box-shadow: 0 0 12px currentColor; }
+}
+.status-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+.status-dot.active { background: var(--green); color: var(--green); }
+.status-dot.critical { background: var(--red); color: var(--red); }
+.status-dot.warning { background: var(--amber); color: var(--amber); }
+
+/* ── Asset cards: HUD terminal ── */
 .asset-card {
-    background: rgba(16, 21, 33, 0.6) !important;
-    backdrop-filter: blur(10px) !important;
-    border: 1px solid rgba(74, 158, 255, 0.1) !important;
-    border-radius: 12px !important;
-    padding: 12px !important;
-    transition: all 0.3s ease !important;
-    cursor: pointer !important;
+  background: var(--panel) !important;
+  backdrop-filter: blur(10px) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 0 !important;
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  padding: 12px !important;
+  transition: all 0.3s ease !important;
+  cursor: pointer !important;
 }
 .asset-card:hover {
-    border-color: rgba(74, 158, 255, 0.35) !important;
-    box-shadow: 0 4px 20px rgba(74, 158, 255, 0.1) !important;
-    transform: translateY(-2px) !important;
+  border-color: var(--cyan) !important;
+  box-shadow: var(--glow-cyan) !important;
+  transform: translateY(-2px) !important;
 }
 
-/* ── Animated gradient header ── */
-@keyframes shimmer {
-    0% { background-position: -200% center; }
-    100% { background-position: 200% center; }
+/* ── 3-dot navigation (replaces floating arrows) ── */
+.hud-nav-menu {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.futuristic-title {
-    background: linear-gradient(90deg, #3d8bfd, #00c853, #3d8bfd);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: shimmer 3s linear infinite;
+.hud-nav-dots {
+  display: flex;
+  gap: 5px;
+  cursor: pointer;
+  padding: 8px 12px;
+  background: rgba(5, 7, 13, 0.85);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border);
+  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  transition: all 0.25s ease;
 }
+.hud-nav-dots:hover {
+  border-color: var(--cyan);
+  box-shadow: var(--glow-cyan);
+}
+.hud-nav-dots .dot {
+  width: 4px; height: 4px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 4px var(--cyan);
+}
+.hud-nav-popup {
+  display: none;
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  background: rgba(5, 7, 13, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-strong);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  min-width: 180px;
+  z-index: 10000;
+}
+.hud-nav-popup.open { display: block; }
+.hud-nav-popup a {
+  display: block;
+  padding: 10px 16px;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.hud-nav-popup a:last-child { border-bottom: none; }
+.hud-nav-popup a:hover {
+  background: rgba(0, 240, 255, 0.1);
+  color: var(--cyan);
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+  padding-left: 22px;
+}
+
+/* ── Signal glow badges ── */
+.signal-buy { box-shadow: 0 0 12px rgba(0, 255, 136, 0.3) !important; }
+.signal-sell { box-shadow: 0 0 12px rgba(255, 59, 92, 0.3) !important; }
+
+/* ── Glitch text effect ── */
+@keyframes glitch {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-1px); }
+  40% { transform: translateX(1px); }
+  60% { transform: translateX(-0.5px); }
+  80% { transform: translateX(0.5px); }
+}
+.glitch-text:hover { animation: glitch 0.3s ease; }
+
+/* ── Typing/decode text reveal ── */
+@keyframes type-reveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+.type-reveal {
+  animation: type-reveal 1s ease-out;
+}
+
+/* ── Panel border with corner accents ── */
+.hud-panel {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+.hud-panel::before, .hud-panel::after {
+  content: "";
+  position: absolute;
+  width: 16px; height: 16px;
+  border: 2px solid var(--cyan);
+}
+.hud-panel::before { top: 0; left: 0; border-right: none; border-bottom: none; }
+.hud-panel::after { bottom: 0; right: 0; border-left: none; border-top: none; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── Floating Action Buttons (inject HTML) ──
+# ── 3-Dot HUD Navigation (replaces floating arrows) ──
 st.markdown("""
-<div class="floating-actions">
-    <div class="fab-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Scroll to Top">↑</div>
-    <div class="fab-btn" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})" title="Scroll to Bottom">↓</div>
+<div class="hud-nav-menu">
+  <div class="hud-nav-dots" onclick="document.getElementById('hudPopup').classList.toggle('open')">
+    <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+  </div>
+  <div class="hud-nav-popup" id="hudPopup">
+    <a onclick="window.scrollTo({top:0,behavior:'smooth'})">Top</a>
+    <a onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})">Bottom</a>
+    <a onclick="document.getElementById('hudPopup').classList.remove('open')">Close</a>
+  </div>
 </div>
+<script>
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.hud-nav-menu')) {
+      document.getElementById('hudPopup').classList.remove('open');
+    }
+  });
+</script>
 """, unsafe_allow_html=True)
 
 # ──────────────────────────────────────────────
@@ -312,7 +538,7 @@ def check_password():
     </div>
     """, unsafe_allow_html=True)
     pwd = st.text_input("Password", type="password", placeholder="Enter password...", label_visibility="collapsed")
-    if st.button("Unlock \u2192", type="primary", use_container_width=True):
+    if st.button("INITIATE", type="primary", use_container_width=True):
         if pwd == "dinesh@123":
             st.session_state["authenticated"] = True
             st.rerun()
@@ -1819,16 +2045,16 @@ else:
             st.rerun()
 
 st.sidebar.markdown("---")
-st.sidebar.caption("📊 Quant Desk — Real data via yfinance. Not financial advice.")
+st.sidebar.caption("QUANT DESK // REAL DATA VIA YFINANCE // NOT FINANCIAL ADVICE")
 
 # ──────────────────────────────────────────────
 
 if st.session_state.selected_asset is None:
-    st.markdown('<h1 class="futuristic-title">📊 Quant Desk</h1>', unsafe_allow_html=True)
-    st.markdown("### Watchlist \u2014 Chart kholne ke liye ek asset chuniye")
+    st.markdown('<h1 class="sci-fi-title">📊 Quant Desk</h1>', unsafe_allow_html=True)
+    st.markdown("### WATCHLIST // SELECT ASSET TO INITIALIZE")
     st.markdown("")
 
-    search_query = st.text_input("\U0001f50d Search", placeholder="Type ticker or name...", key="watchlist_search")
+    search_query = st.text_input("SEARCH", placeholder="ENTER TICKER OR NAME...", key="watchlist_search")
     filtered = [a for a in ASSETS if
         search_query.lower() in a["ticker"].lower() or
         search_query.lower() in a["name"].lower() or
@@ -1843,7 +2069,7 @@ if st.session_state.selected_asset is None:
                 logo_url = f"https://s3-symbol-logo.tradingview.com/{asset.get('logo', asset['ticker']).lower()}.svg"
                 st.markdown(
                     f'<img src="{logo_url}" width="28" height="28" '
-                    f'style="border-radius:6px;object-fit:contain;background:#fff;padding:2px;" '
+                    f'style="border-radius:0;object-fit:contain;background:rgba(0,240,255,0.05);padding:2px;" '
                     f'onerror="this.style.display=\'none\'">',
                     unsafe_allow_html=True
                 )
@@ -1862,7 +2088,7 @@ if st.session_state.selected_asset is None:
                     st.rerun()
 
     st.markdown("---")
-    st.caption("\U0001f4ca Data source: yfinance (real market data) \u2014 Educational use only, not financial advice.")
+    st.caption("DATA SOURCE: YFINANCE (REAL MARKET DATA) // EDUCATIONAL USE ONLY // NOT FINANCIAL ADVICE")
 
 # ──────────────────────────────────────────────
 # DASHBOARD SCREEN
@@ -1933,11 +2159,11 @@ else:
     # -- Header --
     col_title, col_signal, col_badge, col_price = st.columns([3, 1, 1, 1])
     with col_title:
-        st.markdown(f'<h2 class="futuristic-title">📊 {ticker} — {asset["name"]}</h2>', unsafe_allow_html=True)
+        st.markdown(f'<h2 class="sci-fi-title">📊 {ticker} — {asset["name"]}</h2>', unsafe_allow_html=True)
         st.caption(f"{asset['type']} \u00b7 Data via yfinance \u00b7 {st.session_state.period} / {st.session_state.interval}")
     with col_signal:
         st.markdown(f"""
-        <div style='text-align:center;padding:8px 16px;border-radius:20px;background:{sig_color}22;color:{sig_color};font-size:1.1rem;font-weight:700;'>
+        <div style='text-align:center;padding:8px 16px;border-radius:0;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);background:{sig_color}22;color:{sig_color};font-size:1.1rem;font-weight:700;font-family:Orbitron,monospace;letter-spacing:2px;text-transform:uppercase;text-shadow:0 0 10px {sig_color}80;'>
             {sig['signal']}
         </div>
         """, unsafe_allow_html=True)
@@ -2074,8 +2300,8 @@ else:
     rsi_val = analysis.get("last_rsi", 50)
     rsi_text = "Oversold (<30)" if rsi_val < 30 else "Overbought (>70)" if rsi_val > 70 else "Neutral"
     st.markdown(f"""
-    <div style="padding:16px 20px;border-radius:12px;background:{sig_color}18;border:2px solid {sig_color};color:{sig_color};font-size:1.05rem;font-weight:600;margin:8px 0;">
-        ▶ SIGNAL: {sig["signal"]} &nbsp;|&nbsp; Price: ₹{sig["close"]:,.2f} &nbsp;|&nbsp; RSI: {rsi_val:.1f} ({rsi_text}) &nbsp;|&nbsp; SMA20: {sig["sma_fast"] or "—"} &nbsp;|&nbsp; SMA50: {sig["sma_slow"] or "—"} &nbsp;|&nbsp; MACD: {fmt_num(sig.get("macd"))} &nbsp;|&nbsp; EMA20: {fmt_num(round(float(df["close"].ewm(span=20, adjust=False).mean().iloc[-1]), 2))}
+    <div style="padding:16px 20px;border-radius:0;clip-path:polygon(10px 0,100% 0,100% calc(100% - 10px),calc(100% - 10px) 100%,0 100%,0 10px);background:rgba(5,7,13,0.6);border:1px solid {sig_color};color:{sig_color};font-size:0.95rem;font-weight:600;margin:8px 0;font-family:'Share Tech Mono',monospace;letter-spacing:1px;text-shadow:0 0 8px {sig_color}40;">
+        > SIGNAL: {sig["signal"]} &nbsp;|&nbsp; PRICE: {sig["close"]:,.2f} &nbsp;|&nbsp; RSI: {rsi_val:.1f} ({rsi_text}) &nbsp;|&nbsp; SMA20: {sig["sma_fast"] or "--"} &nbsp;|&nbsp; SMA50: {sig["sma_slow"] or "--"} &nbsp;|&nbsp; MACD: {fmt_num(sig.get("macd"))} &nbsp;|&nbsp; EMA20: {fmt_num(round(float(df["close"].ewm(span=20, adjust=False).mean().iloc[-1]), 2))}
     </div>
     """, unsafe_allow_html=True)
     # ── Top metrics row ──
@@ -2233,7 +2459,7 @@ else:
 st.markdown("---")
 footer_col1, footer_col2 = st.columns([3, 1])
 with footer_col1:
-    st.caption("Quant Desk -- Signal Engine + Backtester + Broker Sandbox | Streamlit + Plotly + yfinance | Not financial advice")
+    st.caption("QUANT DESK // SIGNAL ENGINE + BACKTESTER + BROKER SANDBOX // NOT FINANCIAL ADVICE")
 with footer_col2:
     st.caption("Powered by [TradingView](https://www.tradingview.com)")
 
