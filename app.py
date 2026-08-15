@@ -499,8 +499,7 @@ hr, .stMarkdown hr {
 """, unsafe_allow_html=True)
 
 # ── 3-Dot HUD Navigation (all features + scroll) ──
-# Inject into parent DOM via st.components.v1.html
-# Navigates via URL query params: ?tab=FeatureName
+# Inject into parent DOM. Clicks the sidebar selectbox to navigate.
 st.components.v1.html("""
 <script>
 (function() {
@@ -524,25 +523,80 @@ st.components.v1.html("""
   dropdown.id = 'hudDropdown';
   dropdown.style.cssText = 'display:none;position:absolute;top:100%;right:0;margin-top:6px;background:rgba(5,7,13,0.97);border:1px solid rgba(0,240,255,0.4);min-width:200px;max-height:70vh;overflow-y:auto;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 16px rgba(0,240,255,0.1);';
 
+  // Function to navigate by clicking the sidebar selectbox
+  function navToTab(tabName) {
+    // Try multiple strategies to find and click the sidebar selectbox
+    // Strategy 1: Find baseweb select in sidebar
+    var sidebar = p.querySelector('[data-testid="stSidebar"], section[data-testid="stSidebar"]');
+    if (!sidebar) {
+      // fallback: any baseweb select
+      sidebar = p;
+    }
+    var selects = sidebar.querySelectorAll('[data-baseweb="select"]');
+    var navSelect = null;
+    for (var i = 0; i < selects.length; i++) {
+      // The navigation selectbox should contain one of the tab names
+      var txt = selects[i].textContent;
+      if (txt.indexOf('Dashboard') >= 0 || txt.indexOf('Navigate') >= 0 || txt.indexOf('Strategy') >= 0) {
+        navSelect = selects[i];
+        break;
+      }
+    }
+    if (!navSelect && selects.length > 0) navSelect = selects[0];
+    if (!navSelect) return false;
+
+    // Find the clickable element to open dropdown
+    var clickEl = navSelect.querySelector('[role="combobox"], [role="button"], .baseweb-select, > div[tabindex]');
+    if (!clickEl) {
+      // Try clicking the container itself
+      clickEl = navSelect;
+    }
+
+    // Simulate click to open dropdown
+    var evt = p.createEvent('MouseEvents');
+    evt.initMouseEvent('mousedown', true, true, parent.window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+    clickEl.dispatchEvent(evt);
+    evt = p.createEvent('MouseEvents');
+    evt.initMouseEvent('click', true, true, parent.window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+    clickEl.dispatchEvent(evt);
+
+    // Wait for dropdown options to appear
+    setTimeout(function() {
+      var options = p.querySelectorAll('[role="option"], li[role="option"]');
+      for (var i = 0; i < options.length; i++) {
+        if (options[i].textContent.trim().indexOf(tabName) >= 0 || tabName.indexOf(options[i].textContent.trim()) >= 0) {
+          var optEvt = p.createEvent('MouseEvents');
+          optEvt.initMouseEvent('mousedown', true, true, parent.window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+          options[i].dispatchEvent(optEvt);
+          optEvt = p.createEvent('MouseEvents');
+          optEvt.initMouseEvent('click', true, true, parent.window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+          options[i].dispatchEvent(optEvt);
+          break;
+        }
+      }
+    }, 150);
+    return true;
+  }
+
   var navItems = [
-    {label:'DASHBOARD', icon:'\u25A3', tab:'Dashboard', color:'#00F0FF'},
-    {label:'PRIME TERMINAL', icon:'\u25A4', tab:'Prime Terminal', color:'#00F0FF'},
-    {label:'AI ANALYSIS', icon:'\u25C9', tab:'AI Analysis', color:'#00F0FF'},
-    {label:'FUNDAMENTAL ENGINE', icon:'\u25C8', tab:'Fundamental Engine', color:'#00F0FF'},
-    {label:'STRATEGY BOT', icon:'\u25B2', tab:'Strategy Bot', color:'#C8D4E3'},
-    {label:'BACKTESTER', icon:'\u25B6', tab:'Backtester', color:'#C8D4E3'},
-    {label:'QUANT TOOLS', icon:'\u25CB', tab:'Quant Tools', color:'#C8D4E3'},
-    {label:'QUANT TRADE', icon:'\u25CF', tab:'Quant Trade', color:'#C8D4E3'},
-    {label:'QUANT TRADING', icon:'\u25C6', tab:'Quant Trading', color:'#C8D4E3'},
-    {label:'PORTFOLIO', icon:'\u25A0', tab:'Portfolio', color:'#C8D4E3'},
-    {label:'TRADING BOT', icon:'\u25AC', tab:'Trading Bot', color:'#C8D4E3'},
+    {label:'DASHBOARD', icon:'\u25A3', tab:'Dashboard', color:'#00F0FF', isNav:true},
+    {label:'PRIME TERMINAL', icon:'\u25A4', tab:'Prime Terminal', color:'#00F0FF', isNav:true},
+    {label:'AI ANALYSIS', icon:'\u25C9', tab:'AI Analysis', color:'#00F0FF', isNav:true},
+    {label:'FUNDAMENTAL ENGINE', icon:'\u25C8', tab:'Fundamental Engine', color:'#00F0FF', isNav:true},
+    {label:'STRATEGY BOT', icon:'\u25B2', tab:'Strategy Bot', color:'#C8D4E3', isNav:true},
+    {label:'BACKTESTER', icon:'\u25B6', tab:'Backtester', color:'#C8D4E3', isNav:true},
+    {label:'QUANT TOOLS', icon:'\u25CB', tab:'Quant Tools', color:'#C8D4E3', isNav:true},
+    {label:'QUANT TRADE', icon:'\u25CF', tab:'Quant Trade', color:'#C8D4E3', isNav:true},
+    {label:'QUANT TRADING', icon:'\u25C6', tab:'Quant Trading', color:'#C8D4E3', isNav:true},
+    {label:'PORTFOLIO', icon:'\u25A0', tab:'Portfolio', color:'#C8D4E3', isNav:true},
+    {label:'TRADING BOT', icon:'\u25AC', tab:'Trading Bot', color:'#C8D4E3', isNav:true},
     {type:'divider'},
-    {label:'\u25B2 TOP', icon:'', type:'scroll', target:'top', color:'#C8D4E3'},
-    {label:'\u25BC BOTTOM', icon:'', type:'scroll', target:'bottom', color:'#C8D4E3'},
-    {label:'\u2715 CLOSE', icon:'', type:'close', color:'#FF3B5C'}
+    {label:'\u25B2 TOP', icon:'', type:'scroll', target:'top', color:'#C8D4E3', isNav:false},
+    {label:'\u25BC BOTTOM', icon:'', type:'scroll', target:'bottom', color:'#C8D4E3', isNav:false},
+    {label:'\u2715 CLOSE', icon:'', type:'close', color:'#FF3B5C', isNav:false}
   ];
 
-  navItems.forEach(function(item) {
+  navItems.forEach(function(item, idx) {
     if (item.type === 'divider') {
       var div = p.createElement('div');
       div.style.cssText = 'height:1px;background:linear-gradient(90deg,transparent,rgba(0,240,255,0.3),transparent);margin:4px 0;';
@@ -579,13 +633,20 @@ st.components.v1.html("""
       };
     } else if (item.type === 'close') {
       a.onclick = function() { dropdown.style.display='none'; };
-    } else {
+    } else if (item.isNav) {
       a.onclick = function() {
-        parent.window.location.search = '?tab=' + encodeURIComponent(item.tab);
+        // Close dropdown immediately for visual feedback
+        dropdown.style.display='none';
+        // Try sidebar selectbox approach
+        var ok = navToTab(item.tab);
+        if (!ok) {
+          // Fallback: URL change
+          parent.window.location.href = parent.window.location.pathname + '?tab=' + encodeURIComponent(item.tab);
+        }
       };
     }
 
-    if (navItems.indexOf(item) === navItems.length - 1) {
+    if (idx === navItems.length - 1) {
       a.style.borderBottom = 'none';
     }
     dropdown.appendChild(a);
@@ -688,8 +749,12 @@ ASSETS = [
 # ── Navigation Tabs ──
 NAV_TABS = ["Dashboard", "Prime Terminal", "AI Analysis", "Fundamental Engine", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Quant Trading", "Portfolio", "Trading Bot"]
 
-# Read tab from URL query param (set by 3-dot menu) or fallback to sidebar
-_qp = st.query_params.get("tab")
+# Read tab from URL query param (fallback from 3-dot menu) or sidebar
+_qp = None
+try:
+    _qp = st.query_params.get("tab")
+except:
+    pass
 if _qp and _qp in NAV_TABS:
     active_tab = _qp
     st.sidebar.selectbox("Navigate", NAV_TABS, index=NAV_TABS.index(_qp), key="nav_tab")
