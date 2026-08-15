@@ -54,8 +54,8 @@ st.markdown("""
   --font-body: 'Rajdhani', sans-serif;
 }
 
-/* ── Remove GitHub / Streamlit chrome ── */
-.stDeployButton, #MainMenu, [data-testid="stMainMenu"] { display: none !important; }
+/* ── Hide GitHub deploy button only (menu stays visible) ── */
+.stDeployButton { display: none !important; }
 footer { display: none !important; }
 #stGithubLink, .stGithubLink { display: none !important; }
 .stApp [data-testid="stToolbar"] { display: none !important; }
@@ -565,62 +565,10 @@ ASSETS = [
     {"ticker": "GC=F",          "tv": "TVC:GOLD",         "name": "Gold Futures",            "type": "Commodity", "logo": "GOLD"},
 ]
 
-# ── Navigation Tabs (horizontal radio in main area) ──
+# ── Navigation Tabs ──
 NAV_TABS = ["Dashboard", "Prime Terminal", "AI Analysis", "Fundamental Engine", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Quant Trading", "Portfolio", "Trading Bot"]
 
-st.markdown("""
-<style>
-/* Style the horizontal radio as sci-fi nav bar */
-div[data-testid="stHorizontalRadio"] {
-    background: rgba(5, 7, 13, 0.6) !important;
-    border: 1px solid rgba(0, 240, 255, 0.15) !important;
-    border-radius: 8px !important;
-    padding: 6px !important;
-    gap: 4px !important;
-    flex-wrap: wrap !important;
-}
-div[data-testid="stHorizontalRadio"] > div[role="radiogroup"] {
-    gap: 4px !important;
-    flex-wrap: wrap !important;
-}
-div[data-testid="stHorizontalRadio"] label {
-    font-family: 'Orbitron', 'Rajdhani', monospace !important;
-    font-size: 10px !important;
-    letter-spacing: 1px !important;
-    text-transform: uppercase !important;
-    color: #7c8798 !important;
-    margin-bottom: 4px !important;
-}
-div[data-testid="stHorizontalRadio"] input[type="radio"] + div {
-    font-family: 'Rajdhani', sans-serif !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    padding: 6px 14px !important;
-    border-radius: 6px !important;
-    transition: all 0.2s ease !important;
-    border: 1px solid rgba(0, 240, 255, 0.1) !important;
-    background: rgba(16, 21, 33, 0.6) !important;
-    color: #C8D4E3 !important;
-}
-div[data-testid="stHorizontalRadio"] input[type="radio"]:checked + div {
-    background: rgba(0, 240, 255, 0.15) !important;
-    color: #00F0FF !important;
-    border-color: rgba(0, 240, 255, 0.5) !important;
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2) !important;
-    text-shadow: 0 0 6px rgba(0, 240, 255, 0.3) !important;
-}
-div[data-testid="stHorizontalRadio"] input[type="radio"] + div:hover {
-    border-color: rgba(0, 240, 255, 0.3) !important;
-    color: #00F0FF !important;
-}
-/* Hide the radio circle */
-div[data-testid="stHorizontalRadio"] input[type="radio"] {
-    display: none !important;
-}
-</style>
-""", unsafe_allow_html=True)
-
-active_tab = st.radio("NAVIGATION", NAV_TABS, horizontal=True, key="nav_tab", label_visibility="collapsed")
+active_tab = st.sidebar.selectbox("Navigate", NAV_TABS, key="nav_tab")
 
 if active_tab != "Dashboard":
     if active_tab == "Strategy Bot":
