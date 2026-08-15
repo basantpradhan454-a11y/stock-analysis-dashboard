@@ -499,102 +499,74 @@ hr, .stMarkdown hr {
 """, unsafe_allow_html=True)
 
 # ── 3-Dot HUD Navigation (replaces floating arrows) ──
-# Inject directly into parent DOM via st.markdown (no iframe boundary issues)
-st.markdown("""
-<style>
-#hudNavWrap {
-  position: fixed !important;
-  top: 14px !important;
-  right: 18px !important;
-  z-index: 999999 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: flex-end !important;
-}
-#hudDotsBtn {
-  display: flex !important;
-  gap: 6px !important;
-  cursor: pointer !important;
-  padding: 12px 16px !important;
-  background: rgba(5,7,13,0.92) !important;
-  border: 1px solid rgba(0,240,255,0.35) !important;
-  clip-path: polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px) !important;
-  transition: all 0.25s ease !important;
-}
-#hudDotsBtn:hover {
-  border-color: #00F0FF !important;
-  box-shadow: 0 0 16px rgba(0,240,255,0.4) !important;
-}
-#hudDotsBtn .hud-dot {
-  width: 6px !important;
-  height: 6px !important;
-  border-radius: 50% !important;
-  background: #00F0FF !important;
-  box-shadow: 0 0 6px #00F0FF !important;
-}
-#hudDropdown {
-  display: none !important;
-  position: absolute !important;
-  top: 100% !important;
-  right: 0 !important;
-  margin-top: 6px !important;
-  background: rgba(5,7,13,0.97) !important;
-  border: 1px solid rgba(0,240,255,0.4) !important;
-  min-width: 170px !important;
-  clip-path: polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px) !important;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 16px rgba(0,240,255,0.1) !important;
-}
-#hudDropdown.open { display: block !important; }
-.hud-nav-item {
-  display: block !important;
-  padding: 12px 18px !important;
-  font-family: 'Orbitron', monospace !important;
-  font-size: 11px !important;
-  letter-spacing: 2px !important;
-  text-transform: uppercase !important;
-  color: #C8D4E3 !important;
-  cursor: pointer !important;
-  text-decoration: none !important;
-  border-bottom: 1px solid rgba(0,240,255,0.1) !important;
-  transition: all 0.2s ease !important;
-}
-.hud-nav-item:hover {
-  background: rgba(0,240,255,0.1) !important;
-  color: #00F0FF !important;
-  text-shadow: 0 0 8px rgba(0,240,255,0.4) !important;
-  padding-left: 24px !important;
-}
-.hud-nav-item.close-item {
-  color: #FF3B5C !important;
-}
-.hud-nav-item.close-item:hover {
-  background: rgba(255,59,92,0.1) !important;
-  color: #FF3B5C !important;
-}
-</style>
-
-<div id="hudNavWrap">
-  <div id="hudDotsBtn" onclick="var d=document.getElementById('hudDropdown');d.classList.toggle('open');">
-    <div class="hud-dot"></div>
-    <div class="hud-dot"></div>
-    <div class="hud-dot"></div>
-  </div>
-  <div id="hudDropdown">
-    <a class="hud-nav-item" onclick="window.scrollTo({top:0,behavior:'smooth'});document.getElementById('hudDropdown').classList.remove('open');">&#9650; Top</a>
-    <a class="hud-nav-item" onclick="window.scrollTo({top:999999,behavior:'smooth'});document.getElementById('hudDropdown').classList.remove('open');">&#9660; Bottom</a>
-    <a class="hud-nav-item close-item" onclick="document.getElementById('hudDropdown').classList.remove('open');">&#10005; Close</a>
-  </div>
-</div>
-
+# Inject into parent DOM via st.components.v1.html (scripts work here)
+# Element is created in parent.document so position:fixed works correctly
+st.components.v1.html("""
 <script>
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#hudNavWrap')) {
-    var d = document.getElementById('hudDropdown');
-    if (d) d.classList.remove('open');
-  }
-});
+(function() {
+  var p = parent.document;
+  if (p.getElementById('hudNavWrap')) return;
+
+  var wrap = p.createElement('div');
+  wrap.id = 'hudNavWrap';
+  wrap.style.cssText = 'position:fixed;top:14px;right:18px;z-index:999999;display:flex;flex-direction:column;align-items:flex-end;font-family:Orbitron,Rajdhani,monospace;';
+
+  var btn = p.createElement('div');
+  btn.id = 'hudDotsBtn';
+  btn.style.cssText = 'display:flex;gap:6px;cursor:pointer;padding:12px 16px;background:rgba(5,7,13,0.92);border:1px solid rgba(0,240,255,0.35);clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);transition:all 0.25s ease;';
+  btn.innerHTML = '<div style="width:6px;height:6px;border-radius:50%;background:#00F0FF;box-shadow:0 0 6px #00F0FF;"></div>'
+                + '<div style="width:6px;height:6px;border-radius:50%;background:#00F0FF;box-shadow:0 0 6px #00F0FF;"></div>'
+                + '<div style="width:6px;height:6px;border-radius:50%;background:#00F0FF;box-shadow:0 0 6px #00F0FF;"></div>';
+  btn.onmouseover = function() { this.style.borderColor='#00F0FF'; this.style.boxShadow='0 0 16px rgba(0,240,255,0.4)'; };
+  btn.onmouseout = function() { this.style.borderColor='rgba(0,240,255,0.35)'; this.style.boxShadow='none'; };
+
+  var dropdown = p.createElement('div');
+  dropdown.id = 'hudDropdown';
+  dropdown.style.cssText = 'display:none;position:absolute;top:100%;right:0;margin-top:6px;background:rgba(5,7,13,0.97);border:1px solid rgba(0,240,255,0.4);min-width:170px;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 16px rgba(0,240,255,0.1);';
+
+  var items = [
+    {label:'\u25B2 TOP', color:'#C8D4E3', action:function(){ parent.window.scrollTo({top:0,behavior:'smooth'}); }},
+    {label:'\u25BC BOTTOM', color:'#C8D4E3', action:function(){ parent.window.scrollTo({top:999999,behavior:'smooth'}); }},
+    {label:'\u2715 CLOSE', color:'#FF3B5C', action:function(){}}
+  ];
+
+  items.forEach(function(item, i) {
+    var a = p.createElement('div');
+    a.style.cssText = 'padding:12px 18px;font-family:Orbitron,monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:'+item.color+';cursor:pointer;border-bottom:1px solid rgba(0,240,255,0.1);transition:all 0.2s ease;';
+    a.textContent = item.label;
+    a.onmouseover = function() {
+      this.style.background = item.color === '#FF3B5C' ? 'rgba(255,59,92,0.1)' : 'rgba(0,240,255,0.1)';
+      this.style.color = item.color === '#FF3B5C' ? '#FF3B5C' : '#00F0FF';
+      this.style.textShadow = item.color === '#FF3B5C' ? 'none' : '0 0 8px rgba(0,240,255,0.4)';
+      this.style.paddingLeft = '24px';
+    };
+    a.onmouseout = function() {
+      this.style.background = 'none';
+      this.style.color = item.color;
+      this.style.textShadow = 'none';
+      this.style.paddingLeft = '18px';
+    };
+    a.onclick = function() { item.action(); dropdown.style.display='none'; };
+    if (i === items.length - 1) a.style.borderBottom = 'none';
+    dropdown.appendChild(a);
+  });
+
+  btn.onclick = function() {
+    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+  };
+
+  wrap.appendChild(btn);
+  wrap.appendChild(dropdown);
+  p.body.appendChild(wrap);
+
+  p.addEventListener('click', function(e) {
+    if (!e.target.closest('#hudNavWrap')) {
+      dropdown.style.display = 'none';
+    }
+  });
+})();
 </script>
-""", unsafe_allow_html=True)
+""", height=0)
 
 # ──────────────────────────────────────────────
 # ──────────────────────────────────────────────
