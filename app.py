@@ -571,7 +571,7 @@ NAV_TABS = ["Dashboard", "Prime Terminal", "AI Analysis", "Fundamental Engine", 
 # ── Arrow navigation at top — all features inside expandable arrow ──
 st.markdown("""
 <style>
-/* Style the navigation expander arrow */
+/* Style the navigation expander */
 div[data-testid="stExpander"] details summary {
     font-family: 'Orbitron', 'Rajdhani', monospace !important;
     font-size: 13px !important;
@@ -586,44 +586,54 @@ div[data-testid="stExpander"] details {
     background: rgba(5, 7, 13, 0.6) !important;
     backdrop-filter: blur(10px) !important;
 }
-/* Style radio buttons inside expander as nav pills */
-div[data-testid="stHorizontalRadio"] > div[role="radiogroup"] {
-    gap: 4px !important;
-    flex-wrap: wrap !important;
+/* Style the vertical radio as a list inside a box */
+div[data-testid="stRadio"] > div[role="radiogroup"] {
+    background: rgba(5, 7, 13, 0.5) !important;
+    border: 1px solid rgba(0, 240, 255, 0.15) !important;
+    border-radius: 8px !important;
+    padding: 8px !important;
+    gap: 2px !important;
+    flex-direction: column !important;
 }
-div[data-testid="stHorizontalRadio"] input[type="radio"] + div {
+div[data-testid="stRadio"] label {
+    font-family: 'Orbitron', 'Rajdhani', monospace !important;
+    font-size: 10px !important;
+    letter-spacing: 1px !important;
+    text-transform: uppercase !important;
+    color: #7c8798 !important;
+    margin-bottom: 6px !important;
+}
+div[data-testid="stRadio"] input[type="radio"] + div {
     font-family: 'Rajdhani', sans-serif !important;
-    font-size: 11px !important;
+    font-size: 13px !important;
     font-weight: 600 !important;
-    padding: 6px 14px !important;
+    padding: 8px 14px !important;
     border-radius: 6px !important;
     transition: all 0.2s ease !important;
-    border: 1px solid rgba(0, 240, 255, 0.1) !important;
-    background: rgba(16, 21, 33, 0.6) !important;
     color: #C8D4E3 !important;
+    width: 100% !important;
 }
-div[data-testid="stHorizontalRadio"] input[type="radio"]:checked + div {
-    background: rgba(0, 240, 255, 0.15) !important;
+div[data-testid="stRadio"] input[type="radio"]:checked + div {
+    background: rgba(0, 240, 255, 0.12) !important;
     color: #00F0FF !important;
-    border-color: rgba(0, 240, 255, 0.5) !important;
-    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2) !important;
+    border-left: 3px solid rgba(0, 240, 255, 0.6) !important;
     text-shadow: 0 0 6px rgba(0, 240, 255, 0.3) !important;
 }
-div[data-testid="stHorizontalRadio"] input[type="radio"] + div:hover {
-    border-color: rgba(0, 240, 255, 0.3) !important;
+div[data-testid="stRadio"] input[type="radio"] + div:hover {
     color: #00F0FF !important;
+    background: rgba(0, 240, 255, 0.05) !important;
 }
-div[data-testid="stHorizontalRadio"] input[type="radio"] {
+div[data-testid="stRadio"] input[type="radio"] {
     display: none !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-with st.expander("▸ NAVIGATION — Click arrow to see all features", expanded=True):
-    active_tab = st.radio("NAVIGATION", NAV_TABS, horizontal=True, key="nav_tab", label_visibility="collapsed")
+with st.expander("\u25b8 NAVIGATION — Click arrow to see all features", expanded=True):
+    active_tab = st.radio("NAVIGATION", NAV_TABS, key="nav_tab", label_visibility="collapsed")
 
-# Keep sidebar selectbox as hidden sync
-st.sidebar.selectbox("Navigate", NAV_TABS, index=NAV_TABS.index(active_tab) if active_tab in NAV_TABS else 0, key="nav_tab_sidebar", label_visibility="collapsed")
+# Sidebar shows sub-navigation for Quant Trade/Quant Tools automatically
+
 
 if active_tab != "Dashboard":
     if active_tab == "Strategy Bot":
@@ -631,8 +641,10 @@ if active_tab != "Dashboard":
         render_strategy_bot()
     elif active_tab == "Backtester":
         from modules.backtester import render_backtester
+        render_backtester()
     elif active_tab == "Quant Tools":
         from modules.quant_tools import render_quant_tools
+        from modules.backtester import render_backtester
         render_quant_tools()
         render_backtester()
     elif active_tab == "Quant Trade":
