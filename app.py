@@ -566,7 +566,7 @@ ASSETS = [
 ]
 
 # ── Navigation Tabs ──
-NAV_TABS = ["Dashboard", "Prime Terminal", "AI Analysis", "Fundamental Engine", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Quant Trading", "Portfolio", "Trading Bot"]
+NAV_TABS = ["Dashboard", "AI Analysis", "Fundamental Engine", "Strategy Bot", "Backtester", "Portfolio", "Trading Bot"]
 
 # ── Arrow navigation at top — all features inside expandable arrow ──
 st.markdown("""
@@ -642,26 +642,12 @@ if active_tab != "Dashboard":
     elif active_tab == "Backtester":
         from modules.backtester import render_backtester
         render_backtester()
-    elif active_tab == "Quant Tools":
-        from modules.quant_tools import render_quant_tools
-        from modules.backtester import render_backtester
-        render_quant_tools()
-        render_backtester()
-    elif active_tab == "Quant Trade":
-        from modules.quant_trade import render_quant_trade
-        render_quant_trade()
-    elif active_tab == "Quant Trading":
-        from modules.quant_trading import render_quant_trading
-        render_quant_trading()
     elif active_tab == "Portfolio":
         from modules.portfolio_tracker import render_portfolio_tracker
         render_portfolio_tracker()
     elif active_tab == "AI Analysis":
         from modules.ai_analysis import render_ai_analysis
         render_ai_analysis()
-    elif active_tab == "Prime Terminal":
-        from modules.prime_terminal import render_prime_terminal
-        render_prime_terminal()
     elif active_tab == "Fundamental Engine":
         from modules.fundamental_engine_ui import render_fundamental_engine_ui
         render_fundamental_engine_ui()
