@@ -568,123 +568,62 @@ ASSETS = [
 # ── Navigation Tabs ──
 NAV_TABS = ["Dashboard", "Prime Terminal", "AI Analysis", "Fundamental Engine", "Strategy Bot", "Backtester", "Quant Tools", "Quant Trade", "Quant Trading", "Portfolio", "Trading Bot"]
 
-# ── 3-Dot HUD Navigation (all features inside dropdown arrow) ──
-# Inject into parent DOM via st.components.v1.html
-# Navigates via URL query params: ?tab=FeatureName
-st.components.v1.html("""
-<script>
-(function() {
-  var p = parent.document;
-  if (p.getElementById('hudNavWrap')) return;
+# ── Arrow navigation at top — all features inside expandable arrow ──
+st.markdown("""
+<style>
+/* Style the navigation expander arrow */
+div[data-testid="stExpander"] details summary {
+    font-family: 'Orbitron', 'Rajdhani', monospace !important;
+    font-size: 13px !important;
+    letter-spacing: 1.5px !important;
+    text-transform: uppercase !important;
+    color: #00F0FF !important;
+    font-weight: 600 !important;
+}
+div[data-testid="stExpander"] details {
+    border: 1px solid rgba(0, 240, 255, 0.2) !important;
+    border-radius: 8px !important;
+    background: rgba(5, 7, 13, 0.6) !important;
+    backdrop-filter: blur(10px) !important;
+}
+/* Style radio buttons inside expander as nav pills */
+div[data-testid="stHorizontalRadio"] > div[role="radiogroup"] {
+    gap: 4px !important;
+    flex-wrap: wrap !important;
+}
+div[data-testid="stHorizontalRadio"] input[type="radio"] + div {
+    font-family: 'Rajdhani', sans-serif !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 6px 14px !important;
+    border-radius: 6px !important;
+    transition: all 0.2s ease !important;
+    border: 1px solid rgba(0, 240, 255, 0.1) !important;
+    background: rgba(16, 21, 33, 0.6) !important;
+    color: #C8D4E3 !important;
+}
+div[data-testid="stHorizontalRadio"] input[type="radio"]:checked + div {
+    background: rgba(0, 240, 255, 0.15) !important;
+    color: #00F0FF !important;
+    border-color: rgba(0, 240, 255, 0.5) !important;
+    box-shadow: 0 0 10px rgba(0, 240, 255, 0.2) !important;
+    text-shadow: 0 0 6px rgba(0, 240, 255, 0.3) !important;
+}
+div[data-testid="stHorizontalRadio"] input[type="radio"] + div:hover {
+    border-color: rgba(0, 240, 255, 0.3) !important;
+    color: #00F0FF !important;
+}
+div[data-testid="stHorizontalRadio"] input[type="radio"] {
+    display: none !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
-  var wrap = p.createElement('div');
-  wrap.id = 'hudNavWrap';
-  wrap.style.cssText = 'position:fixed;top:14px;right:18px;z-index:999999;display:flex;flex-direction:column;align-items:flex-end;font-family:Orbitron,Rajdhani,monospace;';
+with st.expander("▸ NAVIGATION — Click arrow to see all features", expanded=True):
+    active_tab = st.radio("NAVIGATION", NAV_TABS, horizontal=True, key="nav_tab", label_visibility="collapsed")
 
-  var btn = p.createElement('div');
-  btn.id = 'hudDotsBtn';
-  btn.style.cssText = 'display:flex;gap:6px;cursor:pointer;padding:12px 16px;background:rgba(5,7,13,0.92);border:1px solid rgba(0,240,255,0.35);clip-path:polygon(6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%,0 6px);transition:all 0.25s ease;';
-  btn.innerHTML = '<div style="width:6px;height:6px;border-radius:50%;background:#00F0FF;box-shadow:0 0 6px #00F0FF;"></div>'
-                + '<div style="width:6px;height:6px;border-radius:50%;background:#00F0FF;box-shadow:0 0 6px #00F0FF;"></div>'
-                + '<div style="width:6px;height:6px;border-radius:50%;background:#00F0FF;box-shadow:0 0 6px #00F0FF;</div>';
-  btn.onmouseover = function() { this.style.borderColor='#00F0FF'; this.style.boxShadow='0 0 16px rgba(0,240,255,0.4)'; };
-  btn.onmouseout = function() { this.style.borderColor='rgba(0,240,255,0.35)'; this.style.boxShadow='none'; };
-
-  var dropdown = p.createElement('div');
-  dropdown.id = 'hudDropdown';
-  dropdown.style.cssText = 'display:none;position:absolute;top:100%;right:0;margin-top:6px;background:rgba(5,7,13,0.97);border:1px solid rgba(0,240,255,0.4);min-width:200px;max-height:70vh;overflow-y:auto;clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);box-shadow:0 8px 32px rgba(0,0,0,0.6),0 0 16px rgba(0,240,255,0.1);';
-
-  var navItems = [
-    {label:'DASHBOARD', icon:'\u25A3', tab:'Dashboard', color:'#00F0FF'},
-    {label:'PRIME TERMINAL', icon:'\u25A4', tab:'Prime Terminal', color:'#00F0FF'},
-    {label:'AI ANALYSIS', icon:'\u25C9', tab:'AI Analysis', color:'#00F0FF'},
-    {label:'FUNDAMENTAL ENGINE', icon:'\u25C8', tab:'Fundamental Engine', color:'#00F0FF'},
-    {label:'STRATEGY BOT', icon:'\u25B2', tab:'Strategy Bot', color:'#C8D4E3'},
-    {label:'BACKTESTER', icon:'\u25B6', tab:'Backtester', color:'#C8D4E3'},
-    {label:'QUANT TOOLS', icon:'\u25CB', tab:'Quant Tools', color:'#C8D4E3'},
-    {label:'QUANT TRADE', icon:'\u25CF', tab:'Quant Trade', color:'#C8D4E3'},
-    {label:'QUANT TRADING', icon:'\u25C6', tab:'Quant Trading', color:'#C8D4E3'},
-    {label:'PORTFOLIO', icon:'\u25A0', tab:'Portfolio', color:'#C8D4E3'},
-    {label:'TRADING BOT', icon:'\u25AC', tab:'Trading Bot', color:'#C8D4E3'},
-    {type:'divider'},
-    {label:'\u25B2 TOP', icon:'', type:'scroll', target:'top', color:'#C8D4E3'},
-    {label:'\u25BC BOTTOM', icon:'', type:'scroll', target:'bottom', color:'#C8D4E3'},
-    {label:'\u2715 CLOSE', icon:'', type:'close', color:'#FF3B5C'}
-  ];
-
-  navItems.forEach(function(item) {
-    if (item.type === 'divider') {
-      var div = p.createElement('div');
-      div.style.cssText = 'height:1px;background:linear-gradient(90deg,transparent,rgba(0,240,255,0.3),transparent);margin:4px 0;';
-      dropdown.appendChild(div);
-      return;
-    }
-
-    var a = p.createElement('div');
-    a.style.cssText = 'padding:10px 16px;font-family:Orbitron,monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:'+item.color+';cursor:pointer;border-bottom:1px solid rgba(0,240,255,0.08);transition:all 0.2s ease;display:flex;align-items:center;gap:8px;';
-    if (item.icon) {
-      a.innerHTML = '<span style="font-size:8px;opacity:0.7;">'+item.icon+'</span> <span>'+item.label+'</span>';
-    } else {
-      a.textContent = item.label;
-    }
-
-    a.onmouseover = function() {
-      this.style.background = item.color === '#FF3B5C' ? 'rgba(255,59,92,0.1)' : 'rgba(0,240,255,0.1)';
-      this.style.color = item.color === '#FF3B5C' ? '#FF3B5C' : '#00F0FF';
-      this.style.textShadow = item.color === '#FF3B5C' ? 'none' : '0 0 8px rgba(0,240,255,0.4)';
-      this.style.paddingLeft = '20px';
-    };
-    a.onmouseout = function() {
-      this.style.background = 'none';
-      this.style.color = item.color;
-      this.style.textShadow = 'none';
-      this.style.paddingLeft = '16px';
-    };
-
-    if (item.type === 'scroll') {
-      a.onclick = function() {
-        if (item.target === 'top') parent.window.scrollTo({top:0,behavior:'smooth'});
-        else parent.window.scrollTo({top:999999,behavior:'smooth'});
-        dropdown.style.display='none';
-      };
-    } else if (item.type === 'close') {
-      a.onclick = function() { dropdown.style.display='none'; };
-    } else {
-      a.onclick = function() {
-        parent.window.location.search = '?tab=' + encodeURIComponent(item.tab);
-      };
-    }
-
-    if (navItems.indexOf(item) === navItems.length - 1) {
-      a.style.borderBottom = 'none';
-    }
-    dropdown.appendChild(a);
-  });
-
-  btn.onclick = function() {
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-  };
-
-  wrap.appendChild(btn);
-  wrap.appendChild(dropdown);
-  p.body.appendChild(wrap);
-
-  p.addEventListener('click', function(e) {
-    if (!e.target.closest('#hudNavWrap')) {
-      dropdown.style.display = 'none';
-    }
-  });
-})();
-</script>
-""", height=0)
-
-# Read tab from URL query param (set by 3-dot menu) or fallback to sidebar
-_qp = st.query_params.get("tab")
-if _qp and _qp in NAV_TABS:
-    active_tab = _qp
-    st.sidebar.selectbox("Navigate", NAV_TABS, index=NAV_TABS.index(_qp), key="nav_tab")
-else:
-    active_tab = st.sidebar.selectbox("Navigate", NAV_TABS, key="nav_tab")
+# Keep sidebar selectbox as hidden sync
+st.sidebar.selectbox("Navigate", NAV_TABS, index=NAV_TABS.index(active_tab) if active_tab in NAV_TABS else 0, key="nav_tab_sidebar", label_visibility="collapsed")
 
 if active_tab != "Dashboard":
     if active_tab == "Strategy Bot":
